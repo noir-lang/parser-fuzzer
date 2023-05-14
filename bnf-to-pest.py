@@ -1,34 +1,6 @@
-import re
 import regex
-from dataclasses import dataclass
 
-@dataclass
-class Symbol:
-    name: str
-
-@dataclass
-class Rule:
-    lhs: Symbol
-    rhs: list[Symbol]
-
-@dataclass
-class Grammar:
-    rules: list[Rule]
-
-    def __init__(self, grammar_str):
-        self.rules = get_rules(grammar_str)
-
-@dataclass
-class TokenRegexp:
-    symbol: Symbol
-    regexp: re.Pattern
-
-@dataclass
-class TokenString:
-    symbol: Symbol
-    string: str
-
-rule_regexp = re.compile("""
+rule_regexp = regex.compile("""
     (?P<lhs>\w+)     \s* # lhs
     # (?:
     #     ->
@@ -40,10 +12,10 @@ rule_regexp = re.compile("""
         (\n\s*\|.+)*
     )
     \n
-""", re.VERBOSE)
+""", regex.VERBOSE)
 
 # replace with ' ~ '
-concat_regexp = re.compile("""
+concat_regexp = regex.compile("""
     (?<=
         [\w\)'"\+\*\?]
     )
@@ -51,7 +23,7 @@ concat_regexp = re.compile("""
     (?=
         [\w\('"&!]
     )
-""", re.VERBOSE)
+""", regex.VERBOSE)
 
 separator_regexp = regex.compile("""
     (?<string>
@@ -70,9 +42,9 @@ separator_regexp = regex.compile("""
         "[^"]+"
     )
     (?<operator>\+|\*)
-""", re.VERBOSE)
+""", regex.VERBOSE)
 
-token_regexp = re.compile("""
+token_regexp = regex.compile("""
     '(.+)'  \s*
     ->      \s*
     (\w+)   \s*
@@ -81,9 +53,9 @@ token_regexp = re.compile("""
         (\w+)   \s*
         {(.*)}
     )?
-""", re.VERBOSE)
+""", regex.VERBOSE)
 
-token_regexp_regexp = re.compile("""
+token_regexp_regexp = regex.compile("""
     \/(.+)\/    \s*
     ->          \s*
     (\w+)       \s*
@@ -92,11 +64,11 @@ token_regexp_regexp = re.compile("""
         (\w+)   \s*
         {(.*)}
     )?
-""", re.VERBOSE)
+""", regex.VERBOSE)
 
-start_decl_regexp = re.compile("""
+start_decl_regexp = regex.compile("""
     ^ \s* [#] start \s+ ([a-zA-Z_][a-zA-Z0-9_]*)
-""", re.VERBOSE | re.MULTILINE)
+""", regex.VERBOSE | regex.MULTILINE)
 
 def modify_seq(match):
     string = match.group('string')
@@ -112,15 +84,15 @@ def modify_seq(match):
 def modify_rule(match):
     lhs = match.group('lhs')
     rhs = match.group('rhs')
-    rhs = re.sub(concat_regexp, ' ~ ', rhs)
+    rhs = regex.sub(concat_regexp, ' ~ ', rhs)
     rhs = regex.sub(separator_regexp, modify_seq, rhs)
     return f"{lhs} ::= {rhs}"
 
 with open('grammar.bnf', 'r') as grammar_file:
     grammar_str = grammar_file.read()
-    grammar_str = re.sub(rule_regexp, modify_rule, grammar_str)
-    grammar_str = re.sub(rule_regexp, r'\g<1> = { \g<2> }', grammar_str)
-    grammar_str = re.sub(start_decl_regexp, r'start = { SOI ~ \g<1> ~ EOI }', grammar_str)
+    grammar_str = regex.sub(rule_regexp, modify_rule, grammar_str)
+    grammar_str = regex.sub(rule_regexp, r'\g<1> = { \g<2> }', grammar_str)
+    grammar_str = regex.sub(start_decl_regexp, r'start = { SOI ~ \g<1> ~ EOI }', grammar_str)
     with open('grammar.pest', 'w') as pest_file:
         pest_file.write(grammar_str)
 
