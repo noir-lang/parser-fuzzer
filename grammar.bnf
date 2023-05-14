@@ -15,32 +15,31 @@
 // bar ::= foo? baz?
 // Bar derives optional foo followed by optional baz.
 // 
-// bar ::= baz%','+
-// Bar derives a sequence of one or more baz where consecutive baz's are separated by a comma
+// bar ::= baz%","+
+// Bar derives a sequence of one or more baz where consecutive baz"s are separated by a comma
 // without a trailing comma.
 //
 // baz ::= ()
 // Baz has a nulling rule (derives an epsilon string).
 // 
-// foo ::= zero_width(bar baz)
+// foo ::= &(bar baz)
 // Foo makes a zero-width assertion that bar and baz are present ahead.
+// 
+// foo ::= !(bar baz)
+// Foo makes a zero-width assertion that bar and baz are NOT present ahead.
 //
 // #start foo
 // Declare start symbol.
 //
-// #token bar
-// Declare token.
-//
-// foo(true) ::= bar
-// foo(false) ::= baz
-// Rules with parameters.
+// /\w+/ -> ident
+// Declare regexp token calle.
 
 #start program
 program ::= module
 
 module ::= top_level_statement*
 
-top_level_statement ::= function_definition(false)
+top_level_statement ::= function_definition_forbid_self
                       | struct_definition
                       | implementation
                       | submodule
@@ -48,102 +47,101 @@ top_level_statement ::= function_definition(false)
                       | use_statement
                       | global_declaration
 
-global_declaration ::= 'global' ident global_type_annotation '=' literal
+global_declaration ::= "global" ident global_type_annotation "=" literal
 
-submodule ::= 'mod' ident '{' module '}'
+submodule ::= "mod" ident "{" module "}"
 
-contract ::= 'contract' ident '{' module '}'
+contract ::= "contract" ident "{" module "}"
 
-function_definition(allow_self) ::= attribute? function_modifiers 'fn' ident generics '(' function_parameters(allow_self) ')' function_return_type block
+function_definition_allow_self ::= attribute? function_modifiers "fn" ident generics "(" function_parameters_allow_self ")" function_return_type block
+function_definition_forbid_self ::= attribute? function_modifiers "fn" ident generics "(" function_parameters_forbid_self ")" function_return_type block
 
-function_modifiers ::= 'unconstrained'? 'open'?
+function_modifiers ::= "unconstrained"? "open"?
 
-generics ::= '<' ident%','* '>' | ()
+generics ::= ("<" ident%","* ">")?
 
-'struct' ident generics '{' struct_fields '}'
+struct_definition ::= "struct" ident generics "{" struct_fields "}"
 
-lambda_return_type ::= ('->' type)?
+lambda_return_type ::= ("->" type)?
 
-function_return_type ::= ('->' optional_visibility type)?
+function_return_type ::= ("->" optional_visibility type)?
 
-#token attribute
+attribute ::= "#[" ("foreign(" ASCII_ALPHA+ ")" | "builtin(" ASCII_ALPHA+ ")" | "alternative(" ASCII_ALPHA+ ")" | "test") "]"
 
-struct_fields ::= (ident ':' type)%','*
+struct_fields ::= (ident ":" type)%","*
 
-lambda_parameters ::= pattern%','*
+lambda_parameters ::= pattern%","*
 
-function_parameters(false) ::= (pattern ':' optional_visibility type)%','+
-function_parameters(true) ::= (self_parameter | pattern ':' optional_visibility type)%','+
+function_parameters_forbid_self ::= (pattern ":" optional_visibility type)%","+
+function_parameters_allow_self ::= (self_parameter | pattern ":" optional_visibility type)%","+
 
-nothing ::= !()
+nothing ::= !""
 
-self_parameter ::= 'self'
+self_parameter ::= "self"
 
-implementation ::= 'impl' generics type '{' function_definition(true)* '}'
+implementation ::= "impl" generics type "{" function_definition_allow_self* "}"
 
-block_expr ::= block(expr_parser)
+block ::= "{" (statement (";" statement)*)? ";"? "}"
 
-block ::= '{' (statement (';' statement)*)? ';'? '}'
+global_type_annotation ::= (":" type)?
 
-global_type_annotation ::= (':' type)?
+optional_type_annotation ::= (":" type)?
 
-optional_type_annotation ::= (':' type)?
+module_declaration ::= "mod" ident
 
-module_declaration ::= 'mod' ident
+use_statement ::= "use" path ("as" ident)?
 
-use_statement ::= 'use' path ('as' ident)?
+path ::= "crate" idents | "dep" idents | idents
+idents ::= ident%"::"+
 
-path ::= 'crate' idents | 'dep' idents | idents
-idents ::= ident%'::'+
-
-#token ident
+ident ::= ASCII_ALPHA (ASCII_ALPHANUMERIC | "_")*
 
 statement ::= constrain | declaration | assignment | expression
 
-constrain ::= 'constrain' expression
+constrain ::= "constrain" expression
 
-declaration ::= 'let' pattern optional_type_annotation '=' expression
+declaration ::= "let" pattern optional_type_annotation "=" expression
 
-pattern ::= ident | 'mut' pattern | '(' pattern%','* ')' | path '{' (ident | ident ':' pattern)%','* '}'
+pattern ::= ident | "mut" pattern | "(" pattern%","* ")" | path "{" (ident | ident ":" pattern)%","* "}"
 
 assignment ::= lvalue assign_operator expression
 
-assign_operator ::= ('+' | '-' | '*' | '/' | '%' | '&' | '^' | '<<' | '>>' | '|') '='
+assign_operator ::= ("+" | "-" | "*" | "/" | "%" | "&" | "^" | "<<" | ">>" | "|") "="
 
-lvalue ::= ident ('.' ident | '[' expression ']')*
+lvalue ::= ident ("." ident | "[" expression "]")*
 
 type ::= type_inner
 type_inner ::= field_type | int_type | bool_type
                | string_type | named_type | array_type
                | tuple_type | vec_type | function_type
 
-optional_visibility ::= 'pub'?
+optional_visibility ::= "pub"?
 
-maybe_comp_time ::= 'comptime'?
+maybe_comp_time ::= "comptime"?
 
-field_type ::= maybe_comp_time 'Field'?
+field_type ::= maybe_comp_time "Field"?
 
-bool_type ::= maybe_comp_time 'bool'
+bool_type ::= maybe_comp_time "bool"
 
-string_type ::= 'str' ('<' type_expression '>')?
+string_type ::= "str" ("<" type_expression ">")?
 
 int_type ::= maybe_comp_time IntType
 
 named_type ::= path generic_type_args
 
-vec_type ::= 'Vec' generic_type_args
+vec_type ::= "Vec" generic_type_args
 
-generic_type_args ::= ('<' (type zero_width(',' | '>') | type_expression)%','+ ','? '>')?
+generic_type_args ::= ("<" (type &("," | ">") | type_expression)%","+ ","? ">")?
 
-array_type ::= '[' type (':' type_expression)? ']'
+array_type ::= "[" type (":" type_expression)? "]"
 
-type_expression ::= expression_with_precedence(lowest_type_precedence, type_expression, true)
+tuple_type ::= "(" (type%","+ ","?)? ")"
 
-tuple_type ::= '(' (type%','+ ','?)? ')'
-
-function_type ::= 'fn' '(' (type%','+ ','?)? ')' '->' type
+function_type ::= "fn" "(" (type%","+ ","?)? ")" "->" type
 
 ////////////////////////////////////////////////////////////////////////////////
+
+/// type_expression ::= expression_with_precedence(lowest_type_precedence, type_expression, true)
 
 /// expression ::= expression_with_precedence(Lowest, expression, false)
 
@@ -163,62 +161,63 @@ function_type ::= 'fn' '(' (type%','+ ','?)? ')' '->' type
 /// EQUIVALENT TO:
 
 expression ::= eq_expr
-eq_expr ::= eq_expr ('=' | '!=') or_expr | or_expr
-or_expr ::= or_expr '|' xor_expr | xor_expr
-xor_expr ::= xor_expr '^' and_expr | and_expr
-and_expr ::= and_expr '&' less_greater_expr | less_greater_expr
-less_greater_expr :;= less_greater_expr ('<' | '<=' | '>' | '>=') shift_expr
-shift_expr ::= shift_expr ('<<' | '>>') sum_expr | sum_expr
-sum_expr ::= sum_expr ('+' | '-') product_expr | product_expr
-product_expr ::= product_expr ('/' | '*') term | term
+eq_expr ::= eq_expr ("=" | "!=") or_expr | or_expr
+or_expr ::= or_expr "|" xor_expr | xor_expr
+xor_expr ::= xor_expr "^" and_expr | and_expr
+and_expr ::= and_expr "&" less_greater_expr | less_greater_expr
+less_greater_expr ::= less_greater_expr ("<" | "<=" | ">" | ">=") shift_expr
+shift_expr ::= shift_expr ("<<" | ">>") sum_expr | sum_expr
+sum_expr ::= sum_expr ("+" | "-") product_expr | product_expr
+product_expr ::= product_expr ("/" | "*") term | term
 
 type_expression ::= type_eq_expr
-type_eq_expr ::= type_eq_expr ('=' | '!=') type_sum_expr | type_sum_expr
-type_sum_expr ::= type_sum_expr ('+' | '-') type_product_expr | type_product_expr
-type_product_expr ::= type_product_expr ('/' | '*') type_expression_term | type_expression_term
+type_eq_expr ::= type_eq_expr ("=" | "!=") type_sum_expr | type_sum_expr
+type_sum_expr ::= type_sum_expr ("+" | "-") type_product_expr | type_product_expr
+type_product_expr ::= type_product_expr ("/" | "*") type_expression_term | type_expression_term
 
 ////////////////////////////////////////////////////////////////////////////////
 
 term ::= not | negation | atom_or_right_unary
 
 atom_or_right_unary ::= atom (call_rhs | array_rhs | cast_rhs | member_rhs)*
-call_rhs ::= '(' expression_list ')'
-array_rhs ::= '[' expression ']'
-cast_rhs ::= 'as' type
-member_rhs ::= '.' field_name ('(' expression_list ')')?
+call_rhs ::= "(" expression_list ")"
+array_rhs ::= "[" expression "]"
+cast_rhs ::= "as" type
+member_rhs ::= "." field_name ("(" expression_list ")")?
 
-if_expr ::= 'if' expression block_expr ('else' (block_expr | if_expr))? 
+if_expr ::= "if" expression block ("else" (block | if_expr))? 
 
-lambda ::= '|' lambda_parameters '|' lambda_return_type expression
+lambda ::= "|" lambda_parameters "|" lambda_return_type expression
 
-for_expr ::= 'for' ident 'in' for_range block_expr 
+for_expr ::= "for" ident "in" for_range block 
 
-for_range ::= expression '..' expression | expression
+for_range ::= expression ".." expression | expression
 
 array_expr ::= standard_array | array_sugar
 
-standard_array ::= '[' expression ']'
+standard_array ::= "[" expression "]"
 
-array_sugar ::= '[' expression ';' expression ']' 
+array_sugar ::= "[" expression ";" expression "]" 
 
-expression_list ::= (expression%','+ ','?)?
+expression_list ::= (expression%","+ ","?)?
 
-not ::= '!' term 
+not ::= "!" term 
 
-negation ::= '-' term
+negation ::= "-" term
 
-atom ::= '(' expression ')' | tuple | if_expr | for_expr | array_expr | constructor | lambda | block | variable | literal
+atom ::= "(" expression ")" | tuple | if_expr | for_expr | array_expr | constructor | lambda | block | variable | literal
 
-type_expression_atom ::= variable | literal | '(' type_expression ')'
+type_expression_atom ::= variable | literal | "(" type_expression ")"
 
-tuple ::= '(' expression_list ')'
+tuple ::= "(" expression_list ")"
 
 field_name ::= ident | int
-#token int
 
-constructor ::= path '{' constructor_field%','+ ','? '}'
+integer ::= "-"? ASCII_DIGIT+
 
-constructor_field ::= ident (':' expression)?
+constructor ::= path "{" constructor_field%","+ ","? "}"
+
+constructor_field ::= ident (":" expression)?
 
 variable ::= path
 
