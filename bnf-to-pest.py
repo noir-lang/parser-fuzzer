@@ -1,3 +1,5 @@
+#!/usr/bin/python3
+
 import regex
 
 rule_regexp = regex.compile("""
