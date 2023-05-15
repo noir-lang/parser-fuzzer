@@ -118,13 +118,15 @@ optional_visibility = { "pub"? }
 
 maybe_comp_time = { "comptime"? }
 
-field_type = { maybe_comp_time ~ "Field"? }
+field_type = { maybe_comp_time ~ "Field" }
 
 bool_type = { maybe_comp_time ~ "bool" }
 
 string_type = { "str" ~ ("<" ~ type_expression ~ ">")? }
 
-int_type = { maybe_comp_time ~ IntType }
+int_type = { maybe_comp_time ~ int_type_token }
+
+int_type_token = { ("u" | "i") ~ ASCII_DIGIT+ ~ !ASCII_ALPHA }
 
 named_type = { path ~ generic_type_args }
 
@@ -160,19 +162,21 @@ function_type = { "fn" ~ "(" ~ ((type ~ ",")* ~ type ~ ","?)? ~ ")" ~ "->" ~ typ
 /// EQUIVALENT TO:
 
 expression = { eq_expr }
-eq_expr = { eq_expr ~ ("=" | "!=") ~ or_expr | or_expr }
-or_expr = { or_expr ~ "|" ~ xor_expr | xor_expr }
-xor_expr = { xor_expr ~ "^" ~ and_expr | and_expr }
-and_expr = { and_expr ~ "&" ~ less_greater_expr | less_greater_expr }
-less_greater_expr = { less_greater_expr ~ ("<" | "<=" | ">" | ">=") ~ shift_expr }
-shift_expr = { shift_expr ~ ("<<" | ">>") ~ sum_expr | sum_expr }
-sum_expr = { sum_expr ~ ("+" | "-") ~ product_expr | product_expr }
-product_expr = { product_expr ~ ("/" | "*") ~ term | term }
+eq_expr = { or_expr ~ ("=" | "!=") ~ eq_expr | or_expr }
+or_expr = { xor_expr ~ "|" ~ or_expr | xor_expr }
+xor_expr = { and_expr ~ "^" ~ xor_expr | and_expr }
+and_expr = { less_greater_expr ~ "&" ~ and_expr | less_greater_expr }
+less_greater_expr = { shift_expr ~ ("<" | "<=" | ">" | ">=") ~ less_greater_expr | shift_expr }
+shift_expr = { sum_expr ~ ("<<" | ">>") ~ shift_expr | sum_expr }
+sum_expr = { product_expr ~ ("+" | "-") ~ sum_expr | product_expr }
+product_expr = { term ~ ("/" | "*") ~ product_expr | term }
 
 type_expression = { type_eq_expr }
-type_eq_expr = { type_eq_expr ~ ("=" | "!=") ~ type_sum_expr | type_sum_expr }
-type_sum_expr = { type_sum_expr ~ ("+" | "-") ~ type_product_expr | type_product_expr }
-type_product_expr = { type_product_expr ~ ("/" | "*") ~ type_expression_term | type_expression_term }
+type_eq_expr = { type_sum_expr ~ ("=" | "!=") ~ type_eq_expr | type_sum_expr }
+type_sum_expr = { type_product_expr ~ ("+" | "-") ~ type_sum_expr | type_product_expr }
+type_product_expr = { type_expression_term ~ ("/" | "*") ~ type_product_expr | type_expression_term }
+
+type_expression_term = { negation_in_type_expression | type_expression_atom }
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -203,6 +207,7 @@ expression_list = { ((expression ~ ",")* ~ expression ~ ","?)? }
 not = { "!" ~ term  }
 
 negation = { "-" ~ term }
+negation_in_type_expression = { "-" ~ type_expression_term }
 
 atom = { "(" ~ expression ~ ")" | tuple | if_expr | for_expr | array_expr | constructor | lambda | block | variable | literal }
 
@@ -210,7 +215,7 @@ type_expression_atom = { variable | literal | "(" ~ type_expression ~ ")" }
 
 tuple = { "(" ~ expression_list ~ ")" }
 
-field_name = { ident | int }
+field_name = { ident | integer }
 
 integer = { "-"? ~ ASCII_DIGIT+ }
 
@@ -220,6 +225,12 @@ constructor_field = { ident ~ (":" ~ expression)? }
 
 variable = { path }
 
-literal = { int | bool | str }
+literal = { integer | bool | str }
 
 literal_or_collection = { literal | constructor | array_expr }
+
+bool = { "true" | "false" }
+
+str = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+
+WHITESPACE = { " " | "\t" | "\n" }

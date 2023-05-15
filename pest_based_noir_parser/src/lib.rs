@@ -6,4 +6,4 @@ use pest::Parser;
 
 #[derive(Parser)]
 #[grammar = "../../grammar.pest"]
-struct NoirParser;
+pub struct NoirParser;
