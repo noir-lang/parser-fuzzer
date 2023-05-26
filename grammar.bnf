@@ -72,8 +72,8 @@ struct_fields ::= (ident ":" type)%","*
 
 lambda_parameters ::= pattern%","*
 
-function_parameters_forbid_self ::= (pattern ":" optional_visibility type)%","+
-function_parameters_allow_self ::= (self_parameter | pattern ":" optional_visibility type)%","+
+function_parameters_forbid_self ::= (pattern ":" optional_visibility type)%","*
+function_parameters_allow_self ::= (self_parameter | pattern ":" optional_visibility type)%","*
 
 nothing ::= !""
 
@@ -102,7 +102,10 @@ constrain ::= "constrain" expression
 
 declaration ::= "let" pattern optional_type_annotation "=" expression
 
-pattern ::= ident | "mut" pattern | "(" pattern%","* ")" | path "{" (ident | ident ":" pattern)%","* "}"
+pattern ::= "mut" pattern
+          | "(" pattern%","* ")"
+          | path "{" (ident | ident ":" pattern)%","* "}"
+          | ident
 
 assignment ::= lvalue assign_operator expression
 
@@ -234,4 +237,4 @@ bool ::= "true" | "false"
 
 str ::= "\"" (!"\"" ~ ANY)* "\""
 
-WHITESPACE ::= " " | "\t"
+WHITESPACE ::= " " | "\t" | "\n"

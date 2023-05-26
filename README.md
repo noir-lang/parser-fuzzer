@@ -20,8 +20,8 @@ python bnf-to-pest.py
 
 ## progress
 
-[x] BNF formal grammar
-[x] converting BNF into Pest
-[ ] parsing
-[ ] generation
-[ ] fuzzing
+* [x] BNF formal grammar
+* [x] converting BNF into Pest
+* [ ] parsing
+* [ ] generation
+* [ ] fuzzing
