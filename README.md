@@ -1,8 +1,8 @@
-# parser-fuzzer
+# Noir Parser Fuzzer
 
 A parser fuzzer for the **Noir** language.
 
-## installation
+## Installation
 
 To install the dependency required by the `bnf-to-pest.py` script:
 
@@ -10,7 +10,7 @@ To install the dependency required by the `bnf-to-pest.py` script:
 pip install -r requirements.txt
 ```
 
-## usage
+## Usage
 
 To convert the `grammar.bnf` file into the `grammar.pest` file, run:
 
@@ -18,7 +18,7 @@ To convert the `grammar.bnf` file into the `grammar.pest` file, run:
 python bnf-to-pest.py
 ```
 
-## progress
+## Progress
 
 * [x] BNF formal grammar
 * [x] converting BNF into Pest
