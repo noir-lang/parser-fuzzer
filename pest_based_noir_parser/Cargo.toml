@@ -6,5 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-pest = "2.6"
-pest_derive = "2.6"
+# pest = "2.6"
+# pest_derive = "2.6"
+pest = { path = "../generator_as_pest_fork/pest/" }
+pest_derive = { path = "../generator_as_pest_fork/derive/" }

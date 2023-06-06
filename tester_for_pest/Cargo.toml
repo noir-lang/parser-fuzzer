@@ -1,0 +1,10 @@
+[package]
+name = "tester_for_pest"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+pest_based_noir_parser = { path = "../pest_based_noir_parser/" }
+pest = "2.6"

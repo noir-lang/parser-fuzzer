@@ -44,9 +44,10 @@ top_level_statement = { function_definition_forbid_self
                       | submodule
                       | module_declaration
                       | use_statement
-                      | global_declaration }
+                      | global_declaration
+                      | contract }
 
-global_declaration = { "global" ~ ident ~ global_type_annotation ~ "=" ~ literal }
+global_declaration = { "global" ~ ident ~ global_type_annotation ~ "=" ~ literal ~ ";" }
 
 submodule = { "mod" ~ ident ~ "{" ~ module ~ "}" }
 
@@ -59,7 +60,9 @@ function_modifiers = { "unconstrained"? ~ "open"? }
 
 generics = { ("<" ~ ((ident ~ ",")* ~ ident)? ~ ">")? }
 
-struct_definition = { "struct" ~ ident ~ generics ~ "{" ~ struct_fields ~ "}" }
+struct_definition = {
+    "struct" ~ ident ~ generics ~ "{" ~ struct_fields ~ "}"
+}
 
 lambda_return_type = { ("->" ~ type)? }
 
@@ -67,12 +70,38 @@ function_return_type = { ("->" ~ optional_visibility ~ type)? }
 
 attribute = { "#[" ~ ("foreign(" ~ ASCII_ALPHA+ ~ ")" | "builtin(" ~ ASCII_ALPHA+ ~ ")" | "alternative(" ~ ident ~ ")" | "test") ~ "]" }
 
-struct_fields = { (((ident ~ ":" ~ type) ~ ",")* ~ (ident ~ ":" ~ type))? }
+struct_fields = {
+    (
+        (
+            (ident ~ ":" ~ type) ~ ","
+        )* ~ (
+            ident ~ ":" ~ type ~ ","?
+        )?
+    )
+}
 
 lambda_parameters = { ((pattern ~ ",")* ~ pattern)? }
 
-function_parameters_forbid_self = { (((pattern ~ ":" ~ optional_visibility ~ type) ~ ",")* ~ (pattern ~ ":" ~ optional_visibility ~ type))? }
-function_parameters_allow_self = { (((self_parameter | pattern ~ ":" ~ optional_visibility ~ type) ~ ",")* ~ (self_parameter | pattern ~ ":" ~ optional_visibility ~ type))? }
+function_parameters_forbid_self = {
+    (
+        (
+            (pattern ~ ":" ~ optional_visibility ~ type)
+             ~ ","
+        )*
+        ~ (pattern ~ ":" ~ optional_visibility ~ type ~ ","?)?
+    )
+}
+function_parameters_allow_self = {
+    (
+        (
+            (self_parameter | pattern ~ ":" ~ optional_visibility ~ type)
+            ~ ","
+        )* ~ (
+            self_parameter | pattern ~ ":" ~ optional_visibility ~ type
+            ~ ","?
+        )?
+    )
+}
 
 nothing = { !"" }
 
@@ -86,9 +115,10 @@ global_type_annotation = { (":" ~ type)? }
 
 optional_type_annotation = { (":" ~ type)? }
 
-module_declaration = { "mod" ~ ident }
+module_declaration = { mod_keyword ~ ident ~ ";" }
+mod_keyword = @{ "mod" ~ WHITESPACE }
 
-use_statement = { "use" ~ path ~ ("as" ~ ident)? }
+use_statement = { "use" ~ path ~ ("as" ~ ident)? ~ ";" }
 
 path = { "crate" ~ idents | "dep" ~ idents | idents }
 idents = { (ident ~ "::")* ~ ident }
@@ -110,12 +140,12 @@ assignment = { lvalue ~ assign_operator ~ expression }
 
 assign_operator = @{ ("+" | "-" | "*" | "/" | "%" | "&" | "^" | "<<" | ">>" | "|" | "") ~ "=" }
 
-lvalue = { ident ~ ("." ~ ident | "[" ~ expression ~ "]")* }
+lvalue = { ident ~ ("." ~ (ident | ASCII_DIGIT+) | "[" ~ expression ~ "]")* }
 
 type = { type_inner }
-type_inner = { int_type | field_type | bool_type
+type_inner = { int_type | function_type | vec_type | field_type | bool_type
                | string_type | named_type | array_type
-               | tuple_type | vec_type | function_type }
+               | tuple_type }
 
 optional_visibility = { "pub"? }
 
@@ -176,7 +206,7 @@ function_type = { "fn" ~ "(" ~ ((type ~ ",")* ~ type ~ ","?)? ~ ")" ~ "->" ~ typ
 
 expression = { term ~ (operator ~ term)* }
 expression_not_semi = { if_expr | for_expr | block }
-operator = { "==" | "!=" | "|" | "^" | "&" | "<<" | ">>" | "<=" | ">=" | "<" | ">" | "+" | "-" | "/" | "*" }
+operator = { "==" | "!=" | "|" | "^" | "&" | "<<" | ">>" | "<=" | ">=" | "<" | ">" | "+" | "-" | "/" | "*" | "%" }
 
 // type_expression = { type_eq_expr }
 // type_eq_expr = { type_sum_expr ~ ("=" | "!=") ~ type_eq_expr | type_sum_expr }
@@ -231,9 +261,9 @@ tuple = { "(" ~ expression_list ~ ")" }
 
 field_name = { ident | integer }
 
-integer = @{ "-"? ~ ASCII_DIGIT+ }
+integer = @{ "-"? ~ ("0x" ~ (ASCII_DIGIT | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F")+ | "0b" ~ ("0" | "1")+ | ASCII_DIGIT+) }
 
-constructor = { path ~ "{" ~ (constructor_field ~ ",")* ~ constructor_field ~ ","? ~ "}" }
+constructor = { path ~ "{" ~ (constructor_field ~ ",")* ~ (constructor_field ~ ","?)? ~ "}" }
 
 constructor_field = { ident ~ (":" ~ expression)? }
 
