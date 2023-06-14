@@ -38,14 +38,14 @@ program = { module }
 
 module = { top_level_statement* }
 
-top_level_statement = { function_definition_forbid_self
-                      | struct_definition
-                      | implementation
-                      | submodule
-                      | module_declaration
-                      | use_statement
-                      | global_declaration
-                      | contract }
+top_level_statement = { W:1 ~ function_definition_forbid_self
+                      | W:1 ~ struct_definition
+                      | W:1 ~ implementation
+                      | W:1 ~ submodule
+                      | W:1 ~ module_declaration
+                      | W:1 ~ use_statement
+                      | W:1 ~ global_declaration
+                      | W:1 ~ contract }
 
 global_declaration = { "global" ~ ident ~ global_type_annotation ~ "=" ~ literal ~ ";" }
 
@@ -68,7 +68,7 @@ lambda_return_type = { ("->" ~ type)? }
 
 function_return_type = { ("->" ~ optional_visibility ~ type)? }
 
-attribute = { "#[" ~ ("foreign(" ~ ASCII_ALPHA+ ~ ")" | "builtin(" ~ ASCII_ALPHA+ ~ ")" | "alternative(" ~ ident ~ ")" | "test") ~ "]" }
+attribute = { "#[" ~ ( W:1 ~"foreign(" ~ ASCII_ALPHA+ ~ ")" | W:1 ~ "builtin(" ~ ASCII_ALPHA+ ~ ")" | W:1 ~ "alternative(" ~ ident ~ ")" | W:1 ~ "test") ~ "]" }
 
 struct_fields = {
     (
@@ -94,10 +94,10 @@ function_parameters_forbid_self = {
 function_parameters_allow_self = {
     (
         (
-            (self_parameter | pattern ~ ":" ~ optional_visibility ~ type)
+            ( W:1 ~ self_parameter | W:1 ~ pattern ~ ":" ~ optional_visibility ~ type )
             ~ ","
         )* ~ (
-            self_parameter | pattern ~ ":" ~ optional_visibility ~ type
+            ( W:1 ~ self_parameter | W:1 ~ pattern ~ ":" ~ optional_visibility ~ type )
             ~ ","?
         )?
     )

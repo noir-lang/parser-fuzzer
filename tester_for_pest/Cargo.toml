@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 pest_based_noir_parser = { path = "../pest_based_noir_parser/" }
-pest = "2.6"
+pest = { path = "../generator_as_pest_fork/pest/" }
+afl = "0.13"

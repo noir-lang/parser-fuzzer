@@ -8,6 +8,7 @@ use pest::Parser;
 #[grammar = "../../grammar.pest"]
 pub struct NoirParser;
 
+#[cfg(test)]
 mod tests {
     use super::*;
 
@@ -37,5 +38,13 @@ r#"for i in 0 {
         let code = r#"0..(C1-1)"#;
         let code = NoirParser::parse(Rule::for_range, code).unwrap().next().unwrap();
         eprintln!("{:?}", code);
+    }
+
+    #[test]
+    fn test_generate() {
+        // let code = r#"0..(C1-1)"#;
+        let code = NoirParser::generate("module", &[1, 2, 42]);
+        eprintln!("{:?}", code);
+        assert_eq!(code, "");
     }
 }
