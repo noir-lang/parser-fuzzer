@@ -18,10 +18,28 @@ To convert the `grammar.bnf` file into the `grammar.pest` file, run:
 python bnf-to-pest.py
 ```
 
+To fuzz:
+```bash
+cd tester_for_pest
+cargo afl fuzz -i in -o out target/debug/tester_for_pest
+```
+
+To list 10 first crashes:
+```bash
+cd tester_for_pest
+ls -U out/default/crashes/ | head -10
+```
+
+To get detailed information for a crash, provide afl with the crash input file name:
+```bash
+cd tester_for_pest
+cargo afl run -- out/default/crashes/id\:000000\,sig\:06\,src\:000000+000084\,time\:15815\,execs\:14618\,op\:splice\,rep\:16
+```
+
 ## Progress
 
 * [x] BNF formal grammar
 * [x] converting BNF into Pest
-* [ ] parsing
-* [ ] generation
+* [x] parsing
+* [x] generation
 * [ ] fuzzing
