@@ -17,16 +17,23 @@ fn main() -> Result<(), Error<Rule>> {
         return main2(&file_path[..]);
     }
     fuzz!(|data: &[u8]| {
-        let code = NoirParser::generate("program", data);
-        let parsed = NoirParser::parse(Rule::program, &code[..]).unwrap().next().unwrap();
+        if let Ok(code) = NoirParser::generate("program", data, Some(10_000_000)) {
+            let parsed = NoirParser::parse(Rule::program, &code[..]).unwrap().next().unwrap();
+        }
     });
     Ok(())
 }
 
 fn main2(file_path: &str) -> Result<(), Error<Rule>> {
-    let contents = fs::read_to_string(file_path)
+    // let contents = fs::read_to_string(file_path)
+    let contents = fs::read(file_path)
         .expect("Should have been able to read the file");
-    let code = NoirParser::parse(Rule::start, &contents[..])?.next().unwrap();
-    println!("{:?}", code);
+    let gen_result = NoirParser::generate("program", &contents[..], Some(10_000_000));
+    println!("{:?}", gen_result);
+    if let Ok(generated) = gen_result {
+        let code = NoirParser::parse(Rule::start, &generated[..]).unwrap().next().unwrap();
+        // println!("{:?}", generated);
+        println!("{:?}", code);
+    }
     Ok(())
 }

@@ -43,8 +43,16 @@ r#"for i in 0 {
     #[test]
     fn test_generate() {
         // let code = r#"0..(C1-1)"#;
-        let code = NoirParser::generate("module", &[1, 2, 42]);
+        let code = NoirParser::generate("module", &[200, 200, 200, 200]);
         eprintln!("{:?}", code);
-        assert_eq!(code, "");
+        assert_eq!(code, "    fn a  (   )  {   }    fn a  (   )  {   }    fn a  (   )  {   }");
     }
+
+    // #[test]
+    // fn test_generate2() {
+    //     // let code = r#"0..(C1-1)"#;
+    //     let code = NoirParser::generate("module", &[200, 200, 200, 50, 250, 50, 250, 50, 250, 100, 32, 216, 0]);
+    //     eprintln!("{:?}", code);
+    //     assert_eq!(code, "    fn a  (   )  {   }    fn a  (   )  {   }    fn a  (   )  {   }");
+    // }
 }
