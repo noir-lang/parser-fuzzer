@@ -12,11 +12,24 @@ pip install -r requirements.txt
 
 ## Usage
 
+### BNF to Pest grammar
+
 To convert the `grammar.bnf` file into the `grammar.pest` file, run:
 
 ```bash
 python bnf-to-pest.py
 ```
+
+### Fuzzing setup
+
+To setup afl:
+```bash
+cargo install cargo-afl
+```
+
+You need `make` installed.
+
+### Fuzzing
 
 To fuzz:
 ```bash
