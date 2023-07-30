@@ -1,0 +1,11 @@
+[workspace]
+members = [
+    "bootstrap",
+    "debugger",
+    "derive",
+    "generator",
+    "grammars",
+    "meta",
+    "pest",
+    "vm"
+]

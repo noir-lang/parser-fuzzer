@@ -1,0 +1,24 @@
+[package]
+name = "pest_meta-fuzz"
+version = "0.0.0"
+authors = ["Automatically generated"]
+publish = false
+rust-version = "1.56"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies.pest]
+path = "../../pest"
+[dependencies.pest_meta]
+path = ".."
+[dependencies.libfuzzer-sys]
+git = "https://github.com/rust-fuzz/libfuzzer-sys.git"
+
+# Prevent this from interfering with workspaces
+[workspace]
+members = ["."]
+
+[[bin]]
+name = "parser"
+path = "fuzz_targets/parser.rs"

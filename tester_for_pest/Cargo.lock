@@ -110,24 +110,15 @@ checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
 
 [[package]]
 name = "cfg"
-version = "0.6.1"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9fa5d53516a9f0e22fa2809546e165e045171ceff83f68a9c9cee406ab0c9319"
 dependencies = [
  "bit-matrix",
  "bit-vec",
  "num",
  "optional",
  "rand",
-]
-
-[[package]]
-name = "cfg"
-version = "0.6.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ff88da7cabb2f95301462b71700a6d309777c29e4cfd008c5d10dce1060358c"
-dependencies = [
- "bit-matrix",
- "bit-vec",
- "optional",
 ]
 
 [[package]]
@@ -408,7 +399,7 @@ checksum = "978aa494585d3ca4ad74929863093e87cac9790d81fe7aba2b3dc2890643a0fc"
 name = "pest"
 version = "2.6.0"
 dependencies = [
- "cfg 0.6.1",
+ "cfg",
  "thiserror",
  "ucd-trie",
 ]
@@ -433,7 +424,7 @@ dependencies = [
 name = "pest_generator"
 version = "2.6.0"
 dependencies = [
- "cfg 0.6.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "cfg",
  "pest",
  "pest_meta",
  "proc-macro2",

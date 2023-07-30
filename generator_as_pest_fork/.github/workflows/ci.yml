@@ -1,0 +1,163 @@
+name: pest Continuous Integration
+
+on:
+  push:
+    branches:
+      - staging
+      - trying
+      - master
+  pull_request:
+    branches:
+      - staging
+      - trying
+      - master
+
+jobs:
+  check:
+    name: cargo check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup
+        uses: ./.github/actions/setup
+        with:
+          kind: check
+          toolchain: 1.62.0
+      - name: cargo check
+        run: cargo check --all --all-features --all-targets
+
+  testing:
+    name: Unit, Style, and Lint Testing
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup
+        uses: ./.github/actions/setup
+        id: setup
+        with:
+          kind: check
+          components: clippy, rustfmt
+          toolchain: 1.62.0
+      - name: cargo fmt
+        run: cargo fmt --all -- --check
+      - name: cargo clippy
+        run: cargo clippy --all --all-features --all-targets -- -Dwarnings
+      - name: cargo test
+        run: cargo test --all --all-features --release
+      - name: cargo test (ignored)
+        run: cargo test -p pest_grammars --lib --verbose --release -- --ignored tests::toml_handles_deep_nesting_unstable
+
+  doc:
+    name: Documentation check
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup
+        uses: ./.github/actions/setup
+        id: setup
+        with:
+          kind: check
+          toolchain: 1.62.0
+      - name: cargo doc
+        run: cargo doc --all --all-features
+
+  dependency:
+    name: Minimal Versions Testing
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup
+        uses: ./.github/actions/setup
+        id: setup
+        with:
+          kind: msrv
+          tools: cargo-msrv
+          toolchain: 1.59.0
+      - name: Check msrv
+        shell: sh
+        run: for crate in "derive" "generator" "grammars" "meta" "pest" "vm"; do cd "$crate" && cargo msrv verify && cd ..; done
+
+  coverage:
+    name: Test Coverage
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup
+        uses: ./.github/actions/setup
+        id: setup
+        with:
+          kind: check
+          components: llvm-tools-preview
+          toolchain: stable
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Generate code coverage
+        run: cargo llvm-cov --all-features --workspace --lcov --output-path lcov.info
+      - name: Upload Results to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: lcov.info
+          flags: unittests
+          name: pest-ci-coverage
+          fail_ci_if_error: false
+          verbose: true
+
+  hack:
+    name: cargo hack check --feature-powerset
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup
+        uses: ./.github/actions/setup
+        id: setup
+        with:
+          kind: check
+          toolchain: 1.62.0
+      - name: Check feature powerset
+        run: cargo hack check --feature-powerset --optional-deps --exclude-all-features --keep-going --lib --tests --ignore-private
+
+  no_std:
+    name: check for no_std compatibility
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup
+        uses: ./.github/actions/setup
+        id: setup
+        with:
+          kind: check
+          components: rust-src
+          toolchain: nightly-2022-11-20 # upgrade this regularly
+      - name: check no_std compatibility
+        run: cd pest && cargo build -j1 -Z build-std=core,alloc --no-default-features --target x86_64-unknown-linux-gnu
+
+  semver:
+    name: check for semver compatibility
+    needs: check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup
+        uses: ./.github/actions/setup
+        id: setup
+        with:
+          kind: check
+          toolchain: nightly-2022-11-20
+          tools: cargo-semver-checks
+      - name: check semver compatibility
+        shell: bash
+        run: ./semvercheck.sh

@@ -20,6 +20,15 @@ To convert the `grammar.bnf` file into the `grammar.pest` file, run:
 python bnf-to-pest.py
 ```
 
+### Pest setup
+
+To boostrap Pest:
+
+```bash
+cd generator_as_pest_fork
+cargo build --package pest_bootstrap
+```
+
 ### Fuzzing setup
 
 To setup afl:
@@ -34,6 +43,7 @@ You need `make` installed.
 To fuzz:
 ```bash
 cd tester_for_pest
+cargo build
 cargo afl fuzz -i in -o out target/debug/tester_for_pest
 ```
 

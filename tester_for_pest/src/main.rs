@@ -5,6 +5,9 @@ extern crate afl;
 
 use std::env;
 use std::fs;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
+use std::fmt::Write;
 
 use pest::Parser;
 use pest::error::Error;
@@ -17,8 +20,35 @@ fn main() -> Result<(), Error<Rule>> {
         return main2(&file_path[..]);
     }
     fuzz!(|data: &[u8]| {
-        if let Ok(code) = NoirParser::generate("program", data, Some(10_000_000)) {
-            let parsed = NoirParser::parse(Rule::program, &code[..]).unwrap().next().unwrap();
+        let mut hasher = DefaultHasher::new();
+        data.hash(&mut hasher);
+        let data_hash = hasher.finish();
+        let filename = format!("{:x}", data_hash);
+        let mut debug = String::new();
+        let mut error = String::new();
+        let program_code = NoirParser::generate("program", data, Some(10_000_000));
+        //
+        if let Ok(code) = program_code {
+            writeln!(debug, "{}", code).unwrap();
+            let parsed = NoirParser::parse(Rule::program, &code[..]);
+            if let Ok(mut foo) = parsed {
+                if let Some(bar) = foo.next() {
+                    writeln!(debug, "{:?}", bar).unwrap();
+                } else {
+                    error = "second unwrap failed".to_string();
+                }
+            } else {
+                error = "first unwrap failed".to_string();
+            }
+        } else {
+            error = "generation exceeded the limit".to_string();
+        }
+        if !error.is_empty() {
+            writeln!(debug, "ERR: {}", error).unwrap();
+        }
+        fs::write(filename, debug).unwrap();
+        if !error.is_empty() {
+            panic!("ERR: {}", error);
         }
     });
     Ok(())
