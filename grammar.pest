@@ -120,7 +120,7 @@ mod_keyword = @{ "mod" ~ WHITESPACE }
 
 use_statement = { "use" ~ path ~ ("as" ~ ident)? ~ ";" }
 
-path = { "crate" ~ idents | "dep" ~ idents | idents }
+path = { "crate" ~ "::" ~ idents | "dep" ~ "::" ~ idents | idents }
 idents = { (ident ~ "::")* ~ ident }
 
 ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
