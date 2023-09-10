@@ -58,7 +58,7 @@ function_definition_forbid_self = { attribute? ~ function_modifiers ~ "fn" ~ ide
 
 function_modifiers = { "unconstrained"? ~ "open"? }
 
-generics = { ("<" ~ ((ident ~ ",")* ~ ident)? ~ ">")? }
+generics = { ("<" ~ ((ident ~ ",")* ~ ident) ~ ">")? }
 
 struct_definition = {
     "struct" ~ ident ~ generics ~ "{" ~ struct_fields ~ "}"
@@ -68,7 +68,7 @@ lambda_return_type = { ("->" ~ type)? }
 
 function_return_type = { ("->" ~ optional_visibility ~ type)? }
 
-attribute = { "#[" ~ ( W:1 ~"foreign(" ~ ASCII_ALPHA+ ~ ")" | W:1 ~ "builtin(" ~ ASCII_ALPHA+ ~ ")" | W:1 ~ "alternative(" ~ ident ~ ")" | W:1 ~ "test") ~ "]" }
+attribute = @{ "#[" ~ ( W:1 ~"foreign(" ~ ASCII_ALPHA+ ~ ")" | W:1 ~ "builtin(" ~ ASCII_ALPHA+ ~ ")" | W:1 ~ "oracle(" ~ ident ~ ")" | W:1 ~ "test") ~ "]" }
 
 struct_fields = {
     (
@@ -125,10 +125,11 @@ idents = { (ident ~ "::")* ~ ident }
 
 ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 
-statement_not_last = { constrain ~ ";" | declaration ~ ";" | assignment ~ ";" | expression ~ ";" | expression_not_semi }
-statement_last = { constrain ~ ";" | declaration ~ ";" | assignment ~ ";" | expression ~ ";"? }
+statement_not_last = { declaration ~ ";" | assignment ~ ";" | expression ~ ";" | expression_not_semi }
+statement_last = { declaration ~ ";" | assignment ~ ";" | expression ~ ";"? }
 
-constrain = { "constrain" ~ expression }
+// "constrain" is deprecated
+// constrain = { "constrain" ~ expression }
 
 declaration = { let_keyword ~ pattern ~ optional_type_annotation ~ "=" ~ expression }
 let_keyword = @{ "let" ~ WHITESPACE }
@@ -155,11 +156,11 @@ field_type = { maybe_comp_time ~ "Field" }
 
 bool_type = { maybe_comp_time ~ "bool" }
 
-string_type = { "str" ~ ("<" ~ type_expression ~ ">")? }
+string_type = { "str" ~ ("<" ~ (variable | integer) ~ ">")? }
 
 int_type = { maybe_comp_time ~ int_type_token }
 
-int_type_token = @{ ("u" | "i") ~ ASCII_DIGIT+ ~ !ASCII_ALPHA }
+int_type_token = @{ ("u" | "i") ~ ASCII_DIGIT ~ ASCII_DIGIT? ~ !ASCII_ALPHA }
 
 named_type = { path ~ generic_type_args }
 
@@ -167,7 +168,7 @@ vec_type = { "Vec" ~ generic_type_args }
 
 generic_type_args = { ("<" ~ ((type ~ &("," | ">") | type_expression) ~ ",")* ~ (type ~ &("," | ">") | type_expression) ~ ","? ~ ">")? }
 
-array_type = { "[" ~ type ~ (";" ~ type_expression)? ~ "]" }
+array_type = { "[" ~ type ~ (";" ~ (variable | integer))? ~ "]" }
 
 tuple_type = { "(" ~ ((type ~ ",")* ~ type ~ ","?)? ~ ")" }
 
@@ -261,7 +262,12 @@ tuple = { "(" ~ expression_list ~ ")" }
 
 field_name = { ident | integer }
 
-integer = @{ "-"? ~ ("0x" ~ (ASCII_DIGIT | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F")+ | "0b" ~ ("0" | "1")+ | ASCII_DIGIT+) }
+// lexer allows only even number of digits for hex
+integer = @{ ("0x" ~ (hex ~ hex)+ | NONZERO ~ ASCII_DIGIT*) }
+
+NONZERO = @{ "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" }
+
+hex = @{ ASCII_DIGIT | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F" }
 
 constructor = { path ~ "{" ~ (constructor_field ~ ",")* ~ (constructor_field ~ ","?)? ~ "}" }
 

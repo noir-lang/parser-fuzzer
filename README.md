@@ -65,6 +65,13 @@ cargo afl run -- out/default/crashes/id\:000000\,sig\:06\,src\:000000+000084\,ti
 ```
 Debug information about the case will be included in the `debug` directory.
 
+To get information for every crash in a directory, provide the tester with the `--all` option and the directory's path:
+```bash
+cd tester_for_pest
+mkdir debug
+cargo afl run -- --all out/default/crashes/
+```
+
 ## Progress
 
 * [x] BNF formal grammar

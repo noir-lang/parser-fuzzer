@@ -96,9 +96,10 @@ idents ::= ident%"::"+
 
 ident ::= ASCII_ALPHA (ASCII_ALPHANUMERIC | "_")*
 
-statement ::= constrain | declaration | assignment | expression
+statement ::= declaration | assignment | expression
 
-constrain ::= "constrain" expression
+// "constrain" is deprecated
+// constrain ::= "constrain" expression
 
 declaration ::= "let" pattern optional_type_annotation "=" expression
 
