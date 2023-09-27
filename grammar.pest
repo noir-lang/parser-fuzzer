@@ -150,17 +150,18 @@ type_inner = { int_type | function_type | vec_type | field_type | bool_type
 
 optional_visibility = { "pub"? }
 
-maybe_comp_time = { "comptime"? }
+// DEPRECATED
+// maybe_comp_time = { "comptime"? }
 
-field_type = { maybe_comp_time ~ "Field" }
+field_type = { "Field" }
 
-bool_type = { maybe_comp_time ~ "bool" }
+bool_type = { "bool" }
 
 string_type = { "str" ~ ("<" ~ (variable | integer) ~ ">")? }
 
-int_type = { maybe_comp_time ~ int_type_token }
+int_type = { int_type_token }
 
-int_type_token = @{ ("u" | "i") ~ ASCII_DIGIT ~ ASCII_DIGIT? ~ !ASCII_ALPHA }
+int_type_token = @{ "u" ~ ASCII_DIGIT ~ ASCII_DIGIT? ~ !ASCII_ALPHA }
 
 named_type = { path ~ generic_type_args }
 
@@ -243,7 +244,7 @@ for_range = { expression ~ ".." ~ expression | expression }
 
 array_expr = { standard_array | array_sugar }
 
-standard_array = { "[" ~ (expression ~ ("," ~ expression)*)? ~ ","? ~ "]" }
+standard_array = { "[" ~ (expression ~ ("," ~ expression)* ~ ","?)? ~ "]" }
 
 array_sugar = { "[" ~ expression ~ ";" ~ expression ~ "]"  }
 
@@ -256,14 +257,14 @@ negation_in_type_expression = { "-" ~ type_expression_term }
 
 atom = { tuple | if_expr | for_expr | array_expr | constructor | lambda | block | variable | literal }
 
-type_expression_atom = { variable | literal | "(" ~ type_expression ~ ")" }
+type_expression_atom = { variable | type_literal | "(" ~ type_expression ~ ")" }
 
 tuple = { "(" ~ expression_list ~ ")" }
 
 field_name = { ident | integer }
 
 // lexer allows only even number of digits for hex
-integer = @{ ("0x" ~ (hex ~ hex)+ | NONZERO ~ ASCII_DIGIT*) }
+integer = @{ ("0x" ~ "00"* ~ (hex ~ hex){,8} | NONZERO ~ ASCII_DIGIT*) }
 
 NONZERO = @{ "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" }
 
@@ -276,6 +277,8 @@ constructor_field = { ident ~ (":" ~ expression)? }
 variable = { path }
 
 literal = { integer | bool | str }
+
+type_literal = { integer }
 
 literal_or_collection = { literal | constructor | array_expr }
 
