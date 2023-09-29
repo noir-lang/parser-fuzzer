@@ -217,7 +217,8 @@ operator = { "==" | "!=" | "|" | "^" | "&" | "<<" | ">>" | "<=" | ">=" | "<" | "
 
 type_expression = { type_expression_term ~ (type_operator ~ type_expression_term)* }
 
-type_operator = { "==" | "!=" | "+" | "-" | "/" | "*" }
+// type_operator = { "==" | "!=" | "+" | "-" | "/" | "*" }
+type_operator = { "+" | "-" | "/" | "*" | "%" }
 
 type_expression_term = { negation_in_type_expression | type_expression_atom }
 
@@ -264,7 +265,7 @@ tuple = { "(" ~ expression_list ~ ")" }
 field_name = { ident | integer }
 
 // lexer allows only even number of digits for hex
-integer = @{ ("0x" ~ "00"* ~ (hex ~ hex){,8} | NONZERO ~ ASCII_DIGIT*) }
+integer = @{ ("0x" ~ "00"* ~ (hex ~ hex){1,8} | NONZERO ~ ASCII_DIGIT{1,18}) }
 
 NONZERO = @{ "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" }
 

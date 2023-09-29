@@ -1,0 +1,2 @@
+// impl<a>	Vec <dep :: _ == crate :: a> {  }
+impl<a>	Vec <a == a> {  }
