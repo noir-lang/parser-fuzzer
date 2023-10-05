@@ -1,0 +1,5 @@
+open fn a ()  { 
+    let x = dep :: __  { a: 1, };
+if (x)
+{   }
+}

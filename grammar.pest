@@ -118,7 +118,7 @@ optional_type_annotation = { (":" ~ type)? }
 module_declaration = { mod_keyword ~ ident ~ ";" }
 mod_keyword = @{ "mod" ~ WHITESPACE }
 
-use_statement = { "use" ~ path ~ ("as" ~ ident)? ~ ";" }
+use_statement = { "use" ~ WHITESPACE ~ path ~ (WHITESPACE ~ "as" ~ ident)? ~ ";" }
 
 path = { "crate" ~ "::" ~ idents | "dep" ~ "::" ~ idents | idents }
 idents = { (ident ~ "::")* ~ ident }
@@ -141,7 +141,9 @@ assignment = { lvalue ~ assign_operator ~ expression }
 
 assign_operator = @{ ("+" | "-" | "*" | "/" | "%" | "&" | "^" | "<<" | ">>" | "|" | "") ~ "=" }
 
-lvalue = { ident ~ ("." ~ (ident | ASCII_DIGIT+) | "[" ~ expression ~ "]")* }
+lvalue = { ident ~ ("." ~ (ident | lvalue_integer) | "[" ~ expression ~ "]")* }
+
+lvalue_integer = @{ (NONZERO ~ ASCII_DIGIT{,18} | "0") }
 
 type = { type_inner }
 type_inner = { int_type | function_type | vec_type | field_type | bool_type
@@ -207,7 +209,12 @@ function_type = { "fn" ~ "(" ~ ((type ~ ",")* ~ type ~ ","?)? ~ ")" ~ "->" ~ typ
 // product_expr = { term ~ ("/" | "*") ~ product_expr | term }
 
 expression = { term ~ (operator ~ term)* }
-expression_not_semi = { if_expr | for_expr | block }
+expression_no_constructors = { term_no_constructors ~ (operator ~ term_no_constructors)* }
+expression_not_semi = {
+    if_expr |
+    // for_expr | "the default type of a for-loop range will be changing from a Field to a u64"
+    block
+}
 operator = { "==" | "!=" | "|" | "^" | "&" | "<<" | ">>" | "<=" | ">=" | "<" | ">" | "+" | "-" | "/" | "*" | "%" }
 
 // type_expression = { type_eq_expr }
@@ -225,14 +232,16 @@ type_expression_term = { negation_in_type_expression | type_expression_atom }
 ////////////////////////////////////////////////////////////////////////////////
 
 term = { not | negation | atom_or_right_unary }
+term_no_constructors = { not_no_constructors | negation_no_constructors | atom_or_right_unary_no_constructors }
 
 atom_or_right_unary = { atom ~ (call_rhs | array_rhs | cast_rhs | member_rhs)* }
+atom_or_right_unary_no_constructors = { atom_no_constructors ~ (call_rhs | array_rhs | cast_rhs | member_rhs)* }
 call_rhs = { "(" ~ expression_list ~ ")" }
 array_rhs = { "[" ~ expression ~ "]" }
-cast_rhs = { "as" ~ type }
+cast_rhs = { WHITESPACE ~ "as" ~ WHITESPACE ~ type }
 member_rhs = { "." ~ field_name ~ ("(" ~ expression_list ~ ")")? }
 
-if_expr = { "if" ~ expression ~ block ~ ("else" ~ (block | if_expr))?  }
+if_expr = { "if" ~ WHITESPACE ~ expression_no_constructors ~ block ~ ("else" ~ (block | if_expr))?  }
 
 lambda = { "|" ~ lambda_parameters ~ "|" ~ lambda_return_type ~ expression }
 
@@ -241,7 +250,7 @@ for_expr2 = { in_keyword ~ for_range ~ block }
 for_keyword = @{ "for" ~ WHITESPACE }
 in_keyword = @{ "in" ~ WHITESPACE }
 
-for_range = { expression ~ ".." ~ expression | expression }
+for_range = { expression_no_constructors ~ ".." ~ expression_no_constructors | expression_no_constructors }
 
 array_expr = { standard_array | array_sugar }
 
@@ -251,12 +260,35 @@ array_sugar = { "[" ~ expression ~ ";" ~ expression ~ "]"  }
 
 expression_list = { ((expression ~ ",")* ~ expression ~ ","?)? }
 
-not = { "!" ~ term  }
+not = { "!" ~ term }
+not_no_constructors = { "!" ~ term_no_constructors }
 
 negation = { "-" ~ term }
+negation_no_constructors = { "-" ~ term_no_constructors }
 negation_in_type_expression = { "-" ~ type_expression_term }
 
-atom = { tuple | if_expr | for_expr | array_expr | constructor | lambda | block | variable | literal }
+atom = {
+    tuple |
+    if_expr |
+    // for_expr |
+    array_expr |
+    constructor |
+    lambda |
+    block |
+    variable |
+    literal
+}
+
+atom_no_constructors = {
+    tuple |
+    if_expr |
+    // for_expr |
+    array_expr |
+    lambda |
+    block |
+    variable |
+    literal
+}
 
 type_expression_atom = { variable | type_literal | "(" ~ type_expression ~ ")" }
 
@@ -265,7 +297,7 @@ tuple = { "(" ~ expression_list ~ ")" }
 field_name = { ident | integer }
 
 // lexer allows only even number of digits for hex
-integer = @{ ("0x" ~ "00"* ~ (hex ~ hex){1,8} | NONZERO ~ ASCII_DIGIT{1,18}) }
+integer = @{ ("0x" ~ "00"* ~ (hex ~ hex){1,8} | NONZERO ~ ASCII_DIGIT{1,18} | "0") }
 
 NONZERO = @{ "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" }
 
