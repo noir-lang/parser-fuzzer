@@ -50,7 +50,7 @@ TopLevelStatement =
                       | GlobalDeclaration
 
 GlobalDeclaration =
-  'global' Ident global_type_annotation '=' Literal
+  'global' Ident GlobalTypeAnnotation '=' Literal
 
 Submodule =
   'mod' Ident '{' Module '}'
@@ -59,9 +59,9 @@ Contract =
   'contract' Ident '{' Module '}'
 
 FunctionDefinitionAllowSelf =
-  Attribute? FunctionModifiers 'fn' Ident generics '(' FunctionParametersAllowSelf ')' FunctionReturnType block
+  Attribute? FunctionModifiers 'fn' Ident Generics '(' FunctionParametersAllowSelf ')' FunctionReturnType Block
 FunctionDefinitionForbidSelf =
-  Attribute? FunctionModifiers 'fn' Ident generics '(' FunctionParametersForbidSelf ')' FunctionReturnType block
+  Attribute? FunctionModifiers 'fn' Ident Generics '(' FunctionParametersForbidSelf ')' FunctionReturnType Block
 
 FunctionModifiers =
   'unconstrained'? 'open'?
@@ -70,13 +70,13 @@ Generics =
   ('<' ((Ident ~ ',')* ~ Ident)? '>')?
 
 StructDefinition =
-  'struct' Ident generics '{' StructFields '}'
+  'struct' Ident Generics '{' StructFields '}'
 
 LambdaReturnType =
   ('->' Type)?
 
 FunctionReturnType =
-  ('->' OptionalVisibility type)?
+  ('->' OptionalVisibility Type)?
 
 Attribute =
   '#[' ('foreign(' AsciiAlpha+ ')' | 'builtin(' AsciiAlpha+ ')' | 'alternative(' AsciiAlpha+ ')' | 'test') ']'
@@ -88,9 +88,9 @@ LambdaParameters =
   ((Pattern ~ ',')* ~ Pattern)?
 
 FunctionParametersForbidSelf =
-  (((Pattern ':' OptionalVisibility type) ~ ',')* ~ (Pattern ':' OptionalVisibility type))?
+  (((Pattern ':' OptionalVisibility Type) ~ ',')* ~ (Pattern ':' OptionalVisibility Type))?
 FunctionParametersAllowSelf =
-  (((SelfParameter | Pattern ':' OptionalVisibility type) ~ ',')* ~ (SelfParameter | Pattern ':' OptionalVisibility type))?
+  (((SelfParameter | Pattern ':' OptionalVisibility Type) ~ ',')* ~ (SelfParameter | Pattern ':' OptionalVisibility Type))?
 
 Nothing =
   !''
@@ -99,7 +99,7 @@ SelfParameter =
   'self'
 
 Implementation =
-  'impl' Generics type '{' FunctionDefinitionAllowSelf* '}'
+  'impl' Generics Type '{' FunctionDefinitionAllowSelf* '}'
 
 Block =
   '{' (Statement (';' Statement)*)? ';'? '}'
@@ -131,7 +131,7 @@ Statement =
 // constrain ::= "constrain" expression
 
 Declaration =
-  'let' Pattern optional_type_annotation '=' Expression
+  'let' Pattern OptionalTypeAnnotation '=' Expression
 
 Pattern =
   'mut' Pattern
@@ -140,7 +140,7 @@ Pattern =
           | Ident
 
 Assignment =
-  Lvalue assign_operator expression
+  Lvalue AssignOperator Expression
 
 AssignOperator =
   ('+' | '-' | '*' | '/' | '%' | '&' | '^' | '<<' | '>>' | '|') '='
@@ -171,13 +171,13 @@ StringType =
   'str' ('<' TypeExpression '>')?
 
 IntType =
-  MaybeCompTime int_type_token
+  MaybeCompTime IntTypeToken
 
 IntTypeToken =
   ('u' | 'i') AsciiDigit+ !ASCII_ALPHA
 
 NamedType =
-  Path generic_type_args
+  Path GenericTypeArgs
 
 VecType =
   'Vec' GenericTypeArgs
@@ -263,13 +263,13 @@ MemberRhs =
   '.' FieldName ('(' ExpressionList ')')?
 
 IfExpr =
-  'if' Expression block ('else' (Block | IfExpr))? 
+  'if' Expression Block ('else' (Block | IfExpr))? 
 
 Lambda =
-  '|' LambdaParameters '|' LambdaReturnType expression
+  '|' LambdaParameters '|' LambdaReturnType Expression
 
 ForExpr =
-  'for' Ident 'in' ForRange block 
+  'for' Ident 'in' ForRange Block 
 
 ForRange =
   Expression '..' Expression | Expression

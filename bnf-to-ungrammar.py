@@ -26,6 +26,9 @@ named_symbol_regexp = regex.compile("""
     (?<=
         (\A | [\(\)'"\+\*\?\|])
         [ ]?  # space
+        |
+        \w
+        [ ]
     )
     (?<ident>
         [a-zA-Z_][a-zA-Z0-9_]*
