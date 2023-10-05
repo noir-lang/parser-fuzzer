@@ -81,3 +81,8 @@ ls debug
 * [x] generation
 * [x] fuzzing
 * [ ] grammar compliance
+
+## Reports
+
+* https://github.com/noir-lang/noir/issues/2375
+* https://github.com/noir-lang/noir/issues/2996
