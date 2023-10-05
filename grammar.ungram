@@ -1,0 +1,334 @@
+// Our BNF syntax used in the specification below works as follows:
+// 
+// foo ::= bar baz
+// Foo derives bar followed by baz.
+// 
+// foo ::= bar | baz
+// Foo derives either bar or baz.
+// 
+// bar ::= baz*
+// Bar derives a sequence of zero or more baz.
+// 
+// bar ::= baz+
+// Bar derives a sequence of one or more baz.
+// 
+// bar ::= foo? baz?
+// Bar derives optional foo followed by optional baz.
+// 
+// bar ::= baz%","+
+// Bar derives a sequence of one or more baz where consecutive baz"s are separated by a comma
+// without a trailing comma.
+//
+// baz ::= ()
+// Baz has a nulling rule (derives an epsilon string).
+// 
+// foo ::= &(bar baz)
+// Foo makes a zero-width assertion that bar and baz are present ahead.
+// 
+// foo ::= !(bar baz)
+// Foo makes a zero-width assertion that bar and baz are NOT present ahead.
+//
+// #start foo
+// Declare start symbol.
+//
+// /\w+/ -> ident
+// Declare regexp token calle.
+SourceFile = Program
+Program =
+  Module
+
+Module =
+  TopLevelStatement*
+
+TopLevelStatement =
+  FunctionDefinitionForbidSelf
+                      | StructDefinition
+                      | Implementation
+                      | Submodule
+                      | ModuleDeclaration
+                      | UseStatement
+                      | GlobalDeclaration
+
+GlobalDeclaration =
+  'global' Ident global_type_annotation '=' Literal
+
+Submodule =
+  'mod' Ident '{' Module '}'
+
+Contract =
+  'contract' Ident '{' Module '}'
+
+FunctionDefinitionAllowSelf =
+  Attribute? FunctionModifiers 'fn' Ident generics '(' FunctionParametersAllowSelf ')' FunctionReturnType block
+FunctionDefinitionForbidSelf =
+  Attribute? FunctionModifiers 'fn' Ident generics '(' FunctionParametersForbidSelf ')' FunctionReturnType block
+
+FunctionModifiers =
+  'unconstrained'? 'open'?
+
+Generics =
+  ('<' ((Ident ~ ',')* ~ Ident)? '>')?
+
+StructDefinition =
+  'struct' Ident generics '{' StructFields '}'
+
+LambdaReturnType =
+  ('->' Type)?
+
+FunctionReturnType =
+  ('->' OptionalVisibility type)?
+
+Attribute =
+  '#[' ('foreign(' AsciiAlpha+ ')' | 'builtin(' AsciiAlpha+ ')' | 'alternative(' AsciiAlpha+ ')' | 'test') ']'
+
+StructFields =
+  (((Ident ':' Type) ~ ',')* ~ (Ident ':' Type))?
+
+LambdaParameters =
+  ((Pattern ~ ',')* ~ Pattern)?
+
+FunctionParametersForbidSelf =
+  (((Pattern ':' OptionalVisibility type) ~ ',')* ~ (Pattern ':' OptionalVisibility type))?
+FunctionParametersAllowSelf =
+  (((SelfParameter | Pattern ':' OptionalVisibility type) ~ ',')* ~ (SelfParameter | Pattern ':' OptionalVisibility type))?
+
+Nothing =
+  !''
+
+SelfParameter =
+  'self'
+
+Implementation =
+  'impl' Generics type '{' FunctionDefinitionAllowSelf* '}'
+
+Block =
+  '{' (Statement (';' Statement)*)? ';'? '}'
+
+GlobalTypeAnnotation =
+  (':' Type)?
+
+OptionalTypeAnnotation =
+  (':' Type)?
+
+ModuleDeclaration =
+  'mod' Ident
+
+UseStatement =
+  'use' Path ('as' Ident)?
+
+Path =
+  'crate' Idents | 'dep' Idents | Idents
+Idents =
+  (Ident ~ '::')* ~ Ident
+
+Ident =
+  AsciiAlpha (AsciiAlphanumeric | '_')*
+
+Statement =
+  Declaration | Assignment | Expression
+
+// "constrain" is deprecated
+// constrain ::= "constrain" expression
+
+Declaration =
+  'let' Pattern optional_type_annotation '=' Expression
+
+Pattern =
+  'mut' Pattern
+          | '(' ((Pattern ~ ',')* ~ Pattern)? ')'
+          | Path '{' (((Ident | Ident ':' Pattern) ~ ',')* ~ (Ident | Ident ':' Pattern))? '}'
+          | Ident
+
+Assignment =
+  Lvalue assign_operator expression
+
+AssignOperator =
+  ('+' | '-' | '*' | '/' | '%' | '&' | '^' | '<<' | '>>' | '|') '='
+
+Lvalue =
+  Ident ('.' Ident | '[' Expression ']')*
+
+Type =
+  TypeInner
+TypeInner =
+  FieldType | IntType | BoolType
+               | StringType | NamedType | ArrayType
+               | TupleType | VecType | FunctionType
+
+OptionalVisibility =
+  'pub'?
+
+MaybeCompTime =
+  'comptime'?
+
+FieldType =
+  MaybeCompTime 'Field'
+
+BoolType =
+  MaybeCompTime 'bool'
+
+StringType =
+  'str' ('<' TypeExpression '>')?
+
+IntType =
+  MaybeCompTime int_type_token
+
+IntTypeToken =
+  ('u' | 'i') AsciiDigit+ !ASCII_ALPHA
+
+NamedType =
+  Path generic_type_args
+
+VecType =
+  'Vec' GenericTypeArgs
+
+GenericTypeArgs =
+  ('<' ((Type &(',' | '>') | TypeExpression) ~ ',')* ~ (Type &(',' | '>') | TypeExpression) ','? '>')?
+
+ArrayType =
+  '[' Type (':' TypeExpression)? ']'
+
+TupleType =
+  '(' ((Type ~ ',')* ~ Type ','?)? ')'
+
+FunctionType =
+  'fn' '(' ((Type ~ ',')* ~ Type ','?)? ')' '->' Type
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// type_expression ::= expression_with_precedence(lowest_type_precedence, type_expression, true)
+
+/// expression ::= expression_with_precedence(Lowest, expression, false)
+
+/// expression_with_precedence(Highest, ExprParser, true) ::= type_expression_term
+/// expression_with_precedence(Highest, ExprParser, false) ::= term
+/// expression_with_precedence(precedence, ExprParser, true) ::= expression_with_precedence(precedence.next_type_precedence(), ExprParser, true)
+///                                                              (
+///                                                                 operator_with_precedence(precedence)
+///                                                                 expression_with_precedence(precedence.next_type_precedence(), ExprParser, true)
+///                                                              )*
+/// expression_with_precedence(precedence, ExprParser, false) ::= expression_with_precedence(precedence.next(), ExprParser, false)
+///                                                              (
+///                                                                 operator_with_precedence(precedence)
+///                                                                 expression_with_precedence(precedence.next(), ExprParser, false)
+///                                                              )*
+
+/// EQUIVALENT TO:
+
+Expression =
+  EqExpr
+EqExpr =
+  OrExpr ('=' | '!=') EqExpr | OrExpr
+OrExpr =
+  XorExpr '|' OrExpr | XorExpr
+XorExpr =
+  AndExpr '^' XorExpr | AndExpr
+AndExpr =
+  LessGreaterExpr '&' AndExpr | LessGreaterExpr
+LessGreaterExpr =
+  ShiftExpr ('<' | '<=' | '>' | '>=') LessGreaterExpr | ShiftExpr
+ShiftExpr =
+  SumExpr ('<<' | '>>') ShiftExpr | SumExpr
+SumExpr =
+  ProductExpr ('+' | '-') SumExpr | ProductExpr
+ProductExpr =
+  Term ('/' | '*') ProductExpr | Term
+
+TypeExpression =
+  TypeEqExpr
+TypeEqExpr =
+  TypeSumExpr ('=' | '!=') TypeEqExpr | TypeSumExpr
+TypeSumExpr =
+  TypeProductExpr ('+' | '-') TypeSumExpr | TypeProductExpr
+TypeProductExpr =
+  TypeExpressionTerm ('/' | '*') TypeProductExpr | TypeExpressionTerm
+
+TypeExpressionTerm =
+  NegationInTypeExpression | TypeExpressionAtom
+
+////////////////////////////////////////////////////////////////////////////////
+
+Term =
+  Not | Negation | AtomOrRightUnary
+
+AtomOrRightUnary =
+  Atom (CallRhs | ArrayRhs | CastRhs | MemberRhs)*
+CallRhs =
+  '(' ExpressionList ')'
+ArrayRhs =
+  '[' Expression ']'
+CastRhs =
+  'as' Type
+MemberRhs =
+  '.' FieldName ('(' ExpressionList ')')?
+
+IfExpr =
+  'if' Expression block ('else' (Block | IfExpr))? 
+
+Lambda =
+  '|' LambdaParameters '|' LambdaReturnType expression
+
+ForExpr =
+  'for' Ident 'in' ForRange block 
+
+ForRange =
+  Expression '..' Expression | Expression
+
+ArrayExpr =
+  StandardArray | ArraySugar
+
+StandardArray =
+  '[' Expression ']'
+
+ArraySugar =
+  '[' Expression ';' Expression ']' 
+
+ExpressionList =
+  ((Expression ~ ',')* ~ Expression ','?)?
+
+Not =
+  '!' Term 
+
+Negation =
+  '-' Term
+NegationInTypeExpression =
+  '-' TypeExpressionTerm
+
+Atom =
+  '(' Expression ')' | Tuple | IfExpr | ForExpr | ArrayExpr | Constructor | Lambda | Block | Variable | Literal
+
+TypeExpressionAtom =
+  Variable | Literal | '(' TypeExpression ')'
+
+Tuple =
+  '(' ExpressionList ')'
+
+FieldName =
+  Ident | Integer
+
+Integer =
+  '-'? AsciiDigit+
+
+Constructor =
+  Path '{' (ConstructorField ~ ',')* ~ ConstructorField ','? '}'
+
+ConstructorField =
+  Ident (':' Expression)?
+
+Variable =
+  Path
+
+Literal =
+  Integer | Bool | Str
+
+LiteralOrCollection =
+  Literal | Constructor | ArrayExpr
+
+Bool =
+  'true' | 'false'
+
+Str =
+  '\'' (!'\'' ~ ANY)* '\''
+
+Whitespace =
+  ' ' | '\t' | '\n'
