@@ -101,9 +101,9 @@ def modify_seq(match):
     separator = match.group('separator')
     operator = match.group('operator')
     if operator == '*':
-        return f'(({string} ~ {separator})* ~ {string})?'
+        return f'(({string} {separator})* {string})?'
     elif operator == '+':
-        return f'({string} ~ {separator})* ~ {string}'
+        return f'({string} {separator})* {string}'
     else:
         raise RuntimeError(f'Invalid seq operator: {operator}, expected: + or *')
 

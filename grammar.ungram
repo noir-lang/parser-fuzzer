@@ -67,7 +67,7 @@ FunctionModifiers =
   'unconstrained'? 'open'?
 
 Generics =
-  ('<' ((Ident ~ ',')* ~ Ident)? '>')?
+  ('<' ((Ident ',')* Ident)? '>')?
 
 StructDefinition =
   'struct' Ident Generics '{' StructFields '}'
@@ -82,15 +82,15 @@ Attribute =
   '#[' ('foreign(' AsciiAlpha+ ')' | 'builtin(' AsciiAlpha+ ')' | 'alternative(' AsciiAlpha+ ')' | 'test') ']'
 
 StructFields =
-  (((Ident ':' Type) ~ ',')* ~ (Ident ':' Type))?
+  (((Ident ':' Type) ',')* (Ident ':' Type))?
 
 LambdaParameters =
-  ((Pattern ~ ',')* ~ Pattern)?
+  ((Pattern ',')* Pattern)?
 
 FunctionParametersForbidSelf =
-  (((Pattern ':' OptionalVisibility Type) ~ ',')* ~ (Pattern ':' OptionalVisibility Type))?
+  (((Pattern ':' OptionalVisibility Type) ',')* (Pattern ':' OptionalVisibility Type))?
 FunctionParametersAllowSelf =
-  (((SelfParameter | Pattern ':' OptionalVisibility Type) ~ ',')* ~ (SelfParameter | Pattern ':' OptionalVisibility Type))?
+  (((SelfParameter | Pattern ':' OptionalVisibility Type) ',')* (SelfParameter | Pattern ':' OptionalVisibility Type))?
 
 Nothing =
   !''
@@ -119,7 +119,7 @@ UseStatement =
 Path =
   'crate' Idents | 'dep' Idents | Idents
 Idents =
-  (Ident ~ '::')* ~ Ident
+  (Ident '::')* Ident
 
 Ident =
   AsciiAlpha (AsciiAlphanumeric | '_')*
@@ -135,8 +135,8 @@ Declaration =
 
 Pattern =
   'mut' Pattern
-          | '(' ((Pattern ~ ',')* ~ Pattern)? ')'
-          | Path '{' (((Ident | Ident ':' Pattern) ~ ',')* ~ (Ident | Ident ':' Pattern))? '}'
+          | '(' ((Pattern ',')* Pattern)? ')'
+          | Path '{' (((Ident | Ident ':' Pattern) ',')* (Ident | Ident ':' Pattern))? '}'
           | Ident
 
 Assignment =
@@ -183,16 +183,16 @@ VecType =
   'Vec' GenericTypeArgs
 
 GenericTypeArgs =
-  ('<' ((Type &(',' | '>') | TypeExpression) ~ ',')* ~ (Type &(',' | '>') | TypeExpression) ','? '>')?
+  ('<' ((Type &(',' | '>') | TypeExpression) ',')* (Type &(',' | '>') | TypeExpression) ','? '>')?
 
 ArrayType =
   '[' Type (':' TypeExpression)? ']'
 
 TupleType =
-  '(' ((Type ~ ',')* ~ Type ','?)? ')'
+  '(' ((Type ',')* Type ','?)? ')'
 
 FunctionType =
-  'fn' '(' ((Type ~ ',')* ~ Type ','?)? ')' '->' Type
+  'fn' '(' ((Type ',')* Type ','?)? ')' '->' Type
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -284,7 +284,7 @@ ArraySugar =
   '[' Expression ';' Expression ']' 
 
 ExpressionList =
-  ((Expression ~ ',')* ~ Expression ','?)?
+  ((Expression ',')* Expression ','?)?
 
 Not =
   '!' Term 
@@ -310,7 +310,7 @@ Integer =
   '-'? AsciiDigit+
 
 Constructor =
-  Path '{' (ConstructorField ~ ',')* ~ ConstructorField ','? '}'
+  Path '{' (ConstructorField ',')* ConstructorField ','? '}'
 
 ConstructorField =
   Ident (':' Expression)?
