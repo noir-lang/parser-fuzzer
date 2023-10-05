@@ -1,6 +1,6 @@
 # Noir Parser Fuzzer
 
-A parser fuzzer for the **Noir** language.
+A parser fuzzer for the [**Noir** language](https://github.com/noir-lang/noir).
 
 ## Installation
 
@@ -70,6 +70,7 @@ To get information for every crash in a directory, provide the tester with the `
 cd tester_for_pest
 mkdir debug
 cargo afl run -- --all out/default/crashes/
+ls debug
 ```
 
 ## Progress
