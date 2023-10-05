@@ -317,7 +317,7 @@ literal_or_collection = { literal | constructor | array_expr }
 
 bool = { "true" | "false" }
 
-str = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
+str = { "\"" ~ (!"\"" ~ !"\\" ~ ANY)* ~ "\"" }
 
 WHITESPACE = _{ " " | "\t" | "\n" }
 
