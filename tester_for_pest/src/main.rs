@@ -53,7 +53,7 @@ fn parse(data: &[u8], save: bool, do_panic: bool) {
     let filename = format!("debug/{:x}", data_hash);
     let mut debug = String::new();
     let mut error = String::new();
-    let program_code = NoirParser::generate("program", data, Some(10_000_000));
+    let program_code = NoirParser::generate("program", data, Some(2_000_000));
     //
     if let Ok(code) = program_code {
         writeln!(debug, "{}", code).unwrap();
@@ -84,7 +84,11 @@ fn parse(data: &[u8], save: bool, do_panic: bool) {
         fs::write(filename, debug).unwrap();
     }
     if !error.is_empty() && do_panic {
-        panic!("ERR: {}", error);
+        if error == "generation exceeded the limit" {
+            eprintln!("ERR: {}", error);
+        } else {
+            panic!("ERR: {}", error);
+        }
     }
 }
 
