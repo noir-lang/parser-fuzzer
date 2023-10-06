@@ -3,6 +3,9 @@
 import regex
 
 rule_regexp = regex.compile("""
+    (?P<atomic>
+        \s*\#atomic\s*
+    )?
     (?P<lhs>\w+)     \s* # lhs
     # (?:
     #     ->
@@ -43,7 +46,10 @@ separator_regexp = regex.compile("""
     % (?<separator>
         "[^"]+"
     )
-    (?<operator>\+|\*)
+    (?<operator>
+        (\.\.\.)?
+        (\+|\*)
+    )
 """, regex.VERBOSE)
 
 token_regexp = regex.compile("""
@@ -80,20 +86,34 @@ def modify_seq(match):
         return f'(({string} ~ {separator})* ~ {string})?'
     elif operator == '+':
         return f'({string} ~ {separator})* ~ {string}'
+    elif operator == '...*':
+        return f'({string} ~ {separator})* ~ ({string} ~ {separator}?)?'
+    elif operator == '...+':
+        return f'({string} ~ {separator})* ~ {string} ~ {separator}?'
     else:
         raise RuntimeError(f'Invalid seq operator: {operator}, expected: + or *')
 
 def modify_rule(match):
     lhs = match.group('lhs')
     rhs = match.group('rhs')
+    atomic = match.group('atomic')
+    if atomic is None:
+        atomic = ''
     rhs = regex.sub(concat_regexp, ' ~ ', rhs)
     rhs = regex.sub(separator_regexp, modify_seq, rhs)
-    return f"{lhs} ::= {rhs}"
+    return f"{atomic}{lhs} ::= {rhs}"
+
+def modify_syntax_of_rule(match):
+    lhs = match.group('lhs')
+    rhs = match.group('rhs')
+    atomic = '' if match.group('atomic') is None else '@'
+    atomic_replacement = '' if match.group('atomic') is None else "\n"
+    return f'{atomic_replacement}{lhs} = {atomic}{{ {rhs} }}'
 
 with open('grammar.bnf', 'r') as grammar_file:
     grammar_str = grammar_file.read()
     grammar_str = regex.sub(rule_regexp, modify_rule, grammar_str)
-    grammar_str = regex.sub(rule_regexp, r'\g<1> = { \g<2> }', grammar_str)
+    grammar_str = regex.sub(rule_regexp, modify_syntax_of_rule, grammar_str)
     grammar_str = regex.sub(start_decl_regexp, r'start = { SOI ~ \g<1> ~ EOI }', grammar_str)
     with open('grammar.pest', 'w') as pest_file:
         pest_file.write(grammar_str)

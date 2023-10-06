@@ -38,14 +38,13 @@ program = { module }
 
 module = { top_level_statement* }
 
-top_level_statement = { W:1 ~ function_definition_forbid_self
-                      | W:1 ~ struct_definition
-                      | W:1 ~ implementation
-                      | W:1 ~ submodule
-                      | W:1 ~ module_declaration
-                      | W:1 ~ use_statement
-                      | W:1 ~ global_declaration
-                      | W:1 ~ contract }
+top_level_statement = { function_definition_forbid_self
+                      | struct_definition
+                      | implementation
+                      | submodule
+                      | module_declaration
+                      | use_statement
+                      | global_declaration }
 
 global_declaration = { "global" ~ ident ~ global_type_annotation ~ "=" ~ literal ~ ";" }
 
@@ -58,52 +57,21 @@ function_definition_forbid_self = { attribute? ~ function_modifiers ~ "fn" ~ ide
 
 function_modifiers = { "unconstrained"? ~ "open"? }
 
-generics = { ("<" ~ ((ident ~ ",")* ~ ident) ~ ">")? }
+generics = { ("<" ~ (ident ~ ",")* ~ ident ~ ">")? }
 
-struct_definition = {
-    "struct" ~ ident ~ generics ~ "{" ~ struct_fields ~ "}"
-}
+struct_definition = { "struct" ~ ident ~ generics ~ "{" ~ struct_fields ~ "}" }
 
 lambda_return_type = { ("->" ~ type)? }
 
 function_return_type = { ("->" ~ optional_visibility ~ type)? }
+attribute = @{ "#[" ~ ("foreign(" ~ ASCII_ALPHA+ ~ ")" | "builtin(" ~ ASCII_ALPHA+ ~ ")" | "oracle(" ~ ASCII_ALPHA+ ~ ")" | "test") ~ "]" }
 
-attribute = @{ "#[" ~ ( W:1 ~"foreign(" ~ ASCII_ALPHA+ ~ ")" | W:1 ~ "builtin(" ~ ASCII_ALPHA+ ~ ")" | W:1 ~ "oracle(" ~ ident ~ ")" | W:1 ~ "test") ~ "]" }
-
-struct_fields = {
-    (
-        (
-            (ident ~ ":" ~ type) ~ ","
-        )* ~ (
-            ident ~ ":" ~ type ~ ","?
-        )?
-    )
-}
+struct_fields = { ((ident ~ ":" ~ type) ~ ",")* ~ ((ident ~ ":" ~ type) ~ ","?)? }
 
 lambda_parameters = { ((pattern ~ ",")* ~ pattern)? }
 
-function_parameters_forbid_self = {
-    (
-        (
-            (pattern ~ ":" ~ optional_visibility ~ type)
-             ~ ","
-        )*
-        ~ (pattern ~ ":" ~ optional_visibility ~ type ~ ","?)?
-    )
-}
-function_parameters_allow_self = {
-    (
-        (
-            ( W:1 ~ self_parameter | W:1 ~ pattern ~ ":" ~ optional_visibility ~ type )
-            ~ ","
-        )* ~ (
-            ( W:1 ~ self_parameter | W:1 ~ pattern ~ ":" ~ optional_visibility ~ type )
-            ~ ","?
-        )?
-    )
-}
-
-nothing = { !"" }
+function_parameters_forbid_self = { ((pattern ~ ":" ~ optional_visibility ~ type) ~ ",")* ~ ((pattern ~ ":" ~ optional_visibility ~ type) ~ ","?)? }
+function_parameters_allow_self = { ((self_parameter | pattern ~ ":" ~ optional_visibility ~ type) ~ ",")* ~ ((self_parameter | pattern ~ ":" ~ optional_visibility ~ type) ~ ","?)? }
 
 self_parameter = { "self" }
 
@@ -122,11 +90,9 @@ use_statement = { "use" ~ WHITESPACE ~ path ~ (WHITESPACE ~ "as" ~ ident)? ~ ";"
 
 path = { "crate" ~ "::" ~ idents | "dep" ~ "::" ~ idents | idents }
 idents = { (ident ~ "::")* ~ ident }
-
 ident = @{ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
 
 statement_not_last = { declaration ~ ";" | assignment ~ ";" | expression ~ ";" | expression_not_semi }
-statement_last = { declaration ~ ";" | assignment ~ ";" | expression ~ ";"? }
 
 // "constrain" is deprecated
 // constrain = { "constrain" ~ expression }
@@ -134,15 +100,15 @@ statement_last = { declaration ~ ";" | assignment ~ ";" | expression ~ ";"? }
 declaration = { let_keyword ~ pattern ~ optional_type_annotation ~ "=" ~ expression }
 let_keyword = @{ "let" ~ WHITESPACE }
 
-pattern = { mut_keyword ~ pattern | "(" ~ ((pattern ~ ",")* ~ pattern)? ~ ")" | path ~ "{" ~ (((ident | ident ~ ":" ~ pattern) ~ ",")* ~ (ident | ident ~ ":" ~ pattern))? ~ "}" | ident }
-mut_keyword = @{ "mut" ~ WHITESPACE }
+pattern = { "mut" ~ pattern
+          | "(" ~ ((pattern ~ ",")* ~ pattern)? ~ ")"
+          | path ~ "{" ~ (((ident | ident ~ ":" ~ pattern) ~ ",")* ~ (ident | ident ~ ":" ~ pattern))? ~ "}"
+          | ident }
 
 assignment = { lvalue ~ assign_operator ~ expression }
-
 assign_operator = @{ ("+" | "-" | "*" | "/" | "%" | "&" | "^" | "<<" | ">>" | "|" | "") ~ "=" }
 
 lvalue = { ident ~ ("." ~ (ident | lvalue_integer) | "[" ~ expression ~ "]")* }
-
 lvalue_integer = @{ (NONZERO ~ ASCII_DIGIT{,18} | "0") }
 
 type = { type_inner }
@@ -162,7 +128,6 @@ bool_type = { "bool" }
 string_type = { "str" ~ ("<" ~ (variable | integer) ~ ">")? }
 
 int_type = { int_type_token }
-
 int_type_token = @{ "u" ~ ASCII_DIGIT ~ ASCII_DIGIT? ~ !ASCII_ALPHA }
 
 named_type = { path ~ generic_type_args }
@@ -198,33 +163,12 @@ function_type = { "fn" ~ "(" ~ ((type ~ ",")* ~ type ~ ","?)? ~ ")" ~ "->" ~ typ
 
 /// EQUIVALENT TO:
 
-// expression = { eq_expr }
-// eq_expr = { or_expr ~ ("==" | "!=") ~ eq_expr | or_expr }
-// or_expr = { xor_expr ~ "|" ~ or_expr | xor_expr }
-// xor_expr = { and_expr ~ "^" ~ xor_expr | and_expr }
-// and_expr = { less_greater_expr ~ "&" ~ and_expr | less_greater_expr }
-// less_greater_expr = { shift_expr ~ ("<" | "<=" | ">" | ">=") ~ less_greater_expr | shift_expr }
-// shift_expr = { sum_expr ~ ("<<" | ">>") ~ shift_expr | sum_expr }
-// sum_expr = { product_expr ~ ("+" | "-") ~ sum_expr | product_expr }
-// product_expr = { term ~ ("/" | "*") ~ product_expr | term }
-
 expression = { term ~ (operator ~ term)* }
 expression_no_constructors = { term_no_constructors ~ (operator ~ term_no_constructors)* }
-expression_not_semi = {
-    if_expr |
-    // for_expr | "the default type of a for-loop range will be changing from a Field to a u64"
-    block
-}
+expression_not_semi = { if_expr | block }
 operator = { "==" | "!=" | "|" | "^" | "&" | "<<" | ">>" | "<=" | ">=" | "<" | ">" | "+" | "-" | "/" | "*" | "%" }
 
-// type_expression = { type_eq_expr }
-// type_eq_expr = { type_sum_expr ~ ("=" | "!=") ~ type_eq_expr | type_sum_expr }
-// type_sum_expr = { type_product_expr ~ ("+" | "-") ~ type_sum_expr | type_product_expr }
-// type_product_expr = { type_expression_term ~ ("/" | "*") ~ type_product_expr | type_expression_term }
-
 type_expression = { type_expression_term ~ (type_operator ~ type_expression_term)* }
-
-// type_operator = { "==" | "!=" | "+" | "-" | "/" | "*" }
 type_operator = { "+" | "-" | "/" | "*" | "%" }
 
 type_expression_term = { negation_in_type_expression | type_expression_atom }
@@ -246,7 +190,6 @@ if_expr = { "if" ~ WHITESPACE ~ expression_no_constructors ~ block ~ ("else" ~ (
 lambda = { "|" ~ lambda_parameters ~ "|" ~ lambda_return_type ~ expression }
 
 for_expr = { for_keyword ~ ident ~ in_keyword ~ for_range ~ block }
-for_expr2 = { in_keyword ~ for_range ~ block }
 for_keyword = @{ "for" ~ WHITESPACE }
 in_keyword = @{ "in" ~ WHITESPACE }
 
@@ -254,7 +197,7 @@ for_range = { expression_no_constructors ~ ".." ~ expression_no_constructors | e
 
 array_expr = { standard_array | array_sugar }
 
-standard_array = { "[" ~ (expression ~ ("," ~ expression)* ~ ","?)? ~ "]" }
+standard_array = { "[" ~ (expression ~ ",")* ~ (expression ~ ","?)? ~ "]" }
 
 array_sugar = { "[" ~ expression ~ ";" ~ expression ~ "]"  }
 
@@ -267,28 +210,8 @@ negation = { "-" ~ term }
 negation_no_constructors = { "-" ~ term_no_constructors }
 negation_in_type_expression = { "-" ~ type_expression_term }
 
-atom = {
-    tuple |
-    if_expr |
-    // for_expr |
-    array_expr |
-    constructor |
-    lambda |
-    block |
-    variable |
-    literal
-}
-
-atom_no_constructors = {
-    tuple |
-    if_expr |
-    // for_expr |
-    array_expr |
-    lambda |
-    block |
-    variable |
-    literal
-}
+atom = { tuple | if_expr | array_expr | constructor | lambda | block | variable | literal }
+atom_no_constructors = { tuple | if_expr | array_expr | lambda | block | variable | literal }
 
 type_expression_atom = { variable | type_literal | "(" ~ type_expression ~ ")" }
 
@@ -297,10 +220,8 @@ tuple = { "(" ~ expression_list ~ ")" }
 field_name = { ident | integer }
 
 // lexer allows only even number of digits for hex
-integer = @{ ("0x" ~ "00"* ~ (hex ~ hex){1,8} | NONZERO ~ ASCII_DIGIT{1,18} | "0") }
-
+integer = @{ "0x" ~ "00"* ~ (hex ~ hex){1,8} | NONZERO ~ ASCII_DIGIT{1,18} | "0" }
 NONZERO = @{ "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9" }
-
 hex = @{ ASCII_DIGIT | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F" }
 
 constructor = { path ~ "{" ~ (constructor_field ~ ",")* ~ (constructor_field ~ ","?)? ~ "}" }
@@ -317,8 +238,6 @@ literal_or_collection = { literal | constructor | array_expr }
 
 bool = { "true" | "false" }
 
-str = { "\"" ~ (!"\"" ~ !"\\" ~ ANY)* ~ "\"" }
+str = { "\"" ~ (!"\"" ~ ANY)* ~ "\"" }
 
-WHITESPACE = _{ " " | "\t" | "\n" }
-
-COMMENT = _{ "//" ~ (!"\n" ~ ANY)* }
+WHITESPACE = { " ~ " | "\t" | "\n" }

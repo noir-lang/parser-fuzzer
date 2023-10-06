@@ -47,7 +47,7 @@ top_level_statement ::= function_definition_forbid_self
                       | use_statement
                       | global_declaration
 
-global_declaration ::= "global" ident global_type_annotation "=" literal
+global_declaration ::= "global" ident global_type_annotation "=" literal ";"
 
 submodule ::= "mod" ident "{" module "}"
 
@@ -58,7 +58,7 @@ function_definition_forbid_self ::= attribute? function_modifiers "fn" ident gen
 
 function_modifiers ::= "unconstrained"? "open"?
 
-generics ::= ("<" ident%","* ">")?
+generics ::= ("<" ident%","+ ">")?
 
 struct_definition ::= "struct" ident generics "{" struct_fields "}"
 
@@ -66,42 +66,47 @@ lambda_return_type ::= ("->" type)?
 
 function_return_type ::= ("->" optional_visibility type)?
 
-attribute ::= "#[" ("foreign(" ASCII_ALPHA+ ")" | "builtin(" ASCII_ALPHA+ ")" | "alternative(" ASCII_ALPHA+ ")" | "test") "]"
+#atomic
+attribute ::= "#[" ("foreign(" ASCII_ALPHA+ ")" | "builtin(" ASCII_ALPHA+ ")" | "oracle(" ASCII_ALPHA+ ")" | "test") "]"
 
-struct_fields ::= (ident ":" type)%","*
+struct_fields ::= (ident ":" type)%","...*
 
 lambda_parameters ::= pattern%","*
 
-function_parameters_forbid_self ::= (pattern ":" optional_visibility type)%","*
-function_parameters_allow_self ::= (self_parameter | pattern ":" optional_visibility type)%","*
-
-nothing ::= !""
+function_parameters_forbid_self ::= (pattern ":" optional_visibility type)%","...*
+function_parameters_allow_self ::= (self_parameter | pattern ":" optional_visibility type)%","...*
 
 self_parameter ::= "self"
 
 implementation ::= "impl" generics type "{" function_definition_allow_self* "}"
 
-block ::= "{" (statement (";" statement)*)? ";"? "}"
+block ::= "{" statement_not_last* expression? "}"
 
 global_type_annotation ::= (":" type)?
 
 optional_type_annotation ::= (":" type)?
 
-module_declaration ::= "mod" ident
+module_declaration ::= mod_keyword ident ";"
+#atomic
+mod_keyword ::= "mod" WHITESPACE
 
-use_statement ::= "use" path ("as" ident)?
+use_statement ::= "use" WHITESPACE path (WHITESPACE "as" ident)? ";"
 
-path ::= "crate" idents | "dep" idents | idents
+path ::= "crate" "::" idents | "dep" "::" idents | idents
 idents ::= ident%"::"+
 
-ident ::= ASCII_ALPHA (ASCII_ALPHANUMERIC | "_")*
+#atomic
+ident ::= (ASCII_ALPHA | "_") (ASCII_ALPHANUMERIC | "_")*
 
-statement ::= declaration | assignment | expression
+statement_not_last ::= declaration ";" | assignment ";" | expression ";" | expression_not_semi
 
 // "constrain" is deprecated
 // constrain ::= "constrain" expression
 
-declaration ::= "let" pattern optional_type_annotation "=" expression
+declaration ::= let_keyword pattern optional_type_annotation "=" expression
+
+#atomic
+let_keyword ::= "let" WHITESPACE
 
 pattern ::= "mut" pattern
           | "(" pattern%","* ")"
@@ -110,28 +115,33 @@ pattern ::= "mut" pattern
 
 assignment ::= lvalue assign_operator expression
 
-assign_operator ::= ("+" | "-" | "*" | "/" | "%" | "&" | "^" | "<<" | ">>" | "|") "="
+#atomic
+assign_operator ::= ("+" | "-" | "*" | "/" | "%" | "&" | "^" | "<<" | ">>" | "|" | "") "="
 
-lvalue ::= ident ("." ident | "[" expression "]")*
+lvalue ::= ident ("." (ident | lvalue_integer) | "[" expression "]")*
+#atomic
+lvalue_integer ::= (NONZERO ASCII_DIGIT{,18} | "0")
 
 type ::= type_inner
-type_inner ::= field_type | int_type | bool_type
+type_inner ::= int_type | function_type | vec_type | field_type | bool_type
                | string_type | named_type | array_type
-               | tuple_type | vec_type | function_type
+               | tuple_type
 
 optional_visibility ::= "pub"?
 
-maybe_comp_time ::= "comptime"?
+// DEPRECATED
+// maybe_comp_time ::= "comptime"?
 
-field_type ::= maybe_comp_time "Field"
+field_type ::= "Field"
 
-bool_type ::= maybe_comp_time "bool"
+bool_type ::= "bool"
 
-string_type ::= "str" ("<" type_expression ">")?
+string_type ::= "str" ("<" (variable | integer) ">")?
 
-int_type ::= maybe_comp_time int_type_token
+int_type ::= int_type_token
 
-int_type_token ::= ("u" | "i") ASCII_DIGIT+ !ASCII_ALPHA
+#atomic
+int_type_token ::= "u" ASCII_DIGIT ASCII_DIGIT? !ASCII_ALPHA
 
 named_type ::= path generic_type_args
 
@@ -139,7 +149,7 @@ vec_type ::= "Vec" generic_type_args
 
 generic_type_args ::= ("<" (type &("," | ">") | type_expression)%","+ ","? ">")?
 
-array_type ::= "[" type (":" type_expression)? "]"
+array_type ::= "[" type (";" (variable | integer))? "]"
 
 tuple_type ::= "(" (type%","+ ","?)? ")"
 
@@ -166,71 +176,83 @@ function_type ::= "fn" "(" (type%","+ ","?)? ")" "->" type
 
 /// EQUIVALENT TO:
 
-expression ::= eq_expr
-eq_expr ::= or_expr ("=" | "!=") eq_expr | or_expr
-or_expr ::= xor_expr "|" or_expr | xor_expr
-xor_expr ::= and_expr "^" xor_expr | and_expr
-and_expr ::= less_greater_expr "&" and_expr | less_greater_expr
-less_greater_expr ::= shift_expr ("<" | "<=" | ">" | ">=") less_greater_expr | shift_expr
-shift_expr ::= sum_expr ("<<" | ">>") shift_expr | sum_expr
-sum_expr ::= product_expr ("+" | "-") sum_expr | product_expr
-product_expr ::= term ("/" | "*") product_expr | term
+expression ::= term (operator term)*
+expression_no_constructors ::= term_no_constructors (operator term_no_constructors)*
+expression_not_semi ::= if_expr | block
+operator ::= "==" | "!=" | "|" | "^" | "&" | "<<" | ">>" | "<=" | ">=" | "<" | ">" | "+" | "-" | "/" | "*" | "%"
 
-type_expression ::= type_eq_expr
-type_eq_expr ::= type_sum_expr ("=" | "!=") type_eq_expr | type_sum_expr
-type_sum_expr ::= type_product_expr ("+" | "-") type_sum_expr | type_product_expr
-type_product_expr ::= type_expression_term ("/" | "*") type_product_expr | type_expression_term
+type_expression ::= type_expression_term (type_operator type_expression_term)*
+type_operator ::= "+" | "-" | "/" | "*" | "%"
 
 type_expression_term ::= negation_in_type_expression | type_expression_atom
 
 ////////////////////////////////////////////////////////////////////////////////
 
 term ::= not | negation | atom_or_right_unary
+term_no_constructors ::= not_no_constructors | negation_no_constructors | atom_or_right_unary_no_constructors
 
 atom_or_right_unary ::= atom (call_rhs | array_rhs | cast_rhs | member_rhs)*
+atom_or_right_unary_no_constructors ::= atom_no_constructors (call_rhs | array_rhs | cast_rhs | member_rhs)*
 call_rhs ::= "(" expression_list ")"
 array_rhs ::= "[" expression "]"
-cast_rhs ::= "as" type
+cast_rhs ::= WHITESPACE "as" WHITESPACE type
 member_rhs ::= "." field_name ("(" expression_list ")")?
 
-if_expr ::= "if" expression block ("else" (block | if_expr))? 
+if_expr ::= "if" WHITESPACE expression_no_constructors block ("else" (block | if_expr))? 
 
 lambda ::= "|" lambda_parameters "|" lambda_return_type expression
 
-for_expr ::= "for" ident "in" for_range block 
+for_expr ::= for_keyword ident in_keyword for_range block
+#atomic
+for_keyword ::= "for" WHITESPACE
+#atomic
+in_keyword ::= "in" WHITESPACE
 
-for_range ::= expression ".." expression | expression
+for_range ::= expression_no_constructors ".." expression_no_constructors | expression_no_constructors
 
 array_expr ::= standard_array | array_sugar
 
-standard_array ::= "[" expression "]"
+standard_array ::= "[" expression%","...* "]"
 
 array_sugar ::= "[" expression ";" expression "]" 
 
 expression_list ::= (expression%","+ ","?)?
 
-not ::= "!" term 
+not ::= "!" term
+not_no_constructors ::= "!" term_no_constructors
 
 negation ::= "-" term
+negation_no_constructors ::= "-" term_no_constructors
 negation_in_type_expression ::= "-" type_expression_term
 
-atom ::= "(" expression ")" | tuple | if_expr | for_expr | array_expr | constructor | lambda | block | variable | literal
+atom ::= tuple | if_expr | array_expr | constructor | lambda | block | variable | literal
+atom_no_constructors ::= tuple | if_expr | array_expr | lambda | block | variable | literal
 
-type_expression_atom ::= variable | literal | "(" type_expression ")"
+type_expression_atom ::= variable | type_literal | "(" type_expression ")"
 
 tuple ::= "(" expression_list ")"
 
 field_name ::= ident | integer
 
-integer ::= "-"? ASCII_DIGIT+
+// lexer allows only even number of digits for hex
+#atomic
+integer ::= "0x" "00"* (hex hex){1,8} | NONZERO ASCII_DIGIT{1,18} | "0"
 
-constructor ::= path "{" constructor_field%","+ ","? "}"
+#atomic
+NONZERO ::= "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
+#atomic
+hex ::= ASCII_DIGIT | "a" | "b" | "c" | "d" | "e" | "f" | "A" | "B" | "C" | "D" | "E" | "F"
+
+constructor ::= path "{" constructor_field%","...* "}"
 
 constructor_field ::= ident (":" expression)?
 
 variable ::= path
 
 literal ::= integer | bool | str
+
+type_literal ::= integer
 
 literal_or_collection ::= literal | constructor | array_expr
 

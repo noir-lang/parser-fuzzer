@@ -50,7 +50,7 @@ TopLevelStatement =
                       | GlobalDeclaration
 
 GlobalDeclaration =
-  'global' Ident GlobalTypeAnnotation '=' Literal
+  'global' Ident GlobalTypeAnnotation '=' Literal ';'
 
 Submodule =
   'mod' Ident '{' Module '}'
@@ -67,7 +67,7 @@ FunctionModifiers =
   'unconstrained'? 'open'?
 
 Generics =
-  ('<' ((Ident ',')* Ident)? '>')?
+  ('<' (Ident ',')* Ident '>')?
 
 StructDefinition =
   'struct' Ident Generics '{' StructFields '}'
@@ -79,21 +79,18 @@ FunctionReturnType =
   ('->' OptionalVisibility Type)?
 
 Attribute =
-  '#[' ('foreign(' AsciiAlpha+ ')' | 'builtin(' AsciiAlpha+ ')' | 'alternative(' AsciiAlpha+ ')' | 'test') ']'
+  '#[' ('foreign(' AsciiAlpha AsciiAlpha* ')' | 'builtin(' AsciiAlpha AsciiAlpha* ')' | 'oracle(' AsciiAlpha AsciiAlpha* ')' | 'test') ']'
 
 StructFields =
-  (((Ident ':' Type) ',')* (Ident ':' Type))?
+  ((Ident ':' Type) ',')* ((Ident ':' Type) ','?)?
 
 LambdaParameters =
   ((Pattern ',')* Pattern)?
 
 FunctionParametersForbidSelf =
-  (((Pattern ':' OptionalVisibility Type) ',')* (Pattern ':' OptionalVisibility Type))?
+  ((Pattern ':' OptionalVisibility Type) ',')* ((Pattern ':' OptionalVisibility Type) ','?)?
 FunctionParametersAllowSelf =
-  (((SelfParameter | Pattern ':' OptionalVisibility Type) ',')* (SelfParameter | Pattern ':' OptionalVisibility Type))?
-
-Nothing =
-  !''
+  ((SelfParameter | Pattern ':' OptionalVisibility Type) ',')* ((SelfParameter | Pattern ':' OptionalVisibility Type) ','?)?
 
 SelfParameter =
   'self'
@@ -102,7 +99,7 @@ Implementation =
   'impl' Generics Type '{' FunctionDefinitionAllowSelf* '}'
 
 Block =
-  '{' (Statement (';' Statement)*)? ';'? '}'
+  '{' StatementNotLast* Expression? '}'
 
 GlobalTypeAnnotation =
   (':' Type)?
@@ -111,27 +108,32 @@ OptionalTypeAnnotation =
   (':' Type)?
 
 ModuleDeclaration =
-  'mod' Ident
+  ModKeyword Ident ';'
+ModKeyword =
+  'mod' Whitespace
 
 UseStatement =
-  'use' Path ('as' Ident)?
+  'use' Whitespace Path (Whitespace 'as' Ident)? ';'
 
 Path =
-  'crate' Idents | 'dep' Idents | Idents
+  'crate' '::' Idents | 'dep' '::' Idents | Idents
 Idents =
   (Ident '::')* Ident
 
 Ident =
-  AsciiAlpha (AsciiAlphanumeric | '_')*
+  (AsciiAlpha | '_') (AsciiAlphanumeric | '_')*
 
-Statement =
-  Declaration | Assignment | Expression
+StatementNotLast =
+  Declaration ';' | Assignment ';' | Expression ';' | ExpressionNotSemi
 
 // "constrain" is deprecated
 // constrain ::= "constrain" expression
 
 Declaration =
-  'let' Pattern OptionalTypeAnnotation '=' Expression
+  LetKeyword Pattern OptionalTypeAnnotation '=' Expression
+
+LetKeyword =
+  'let' Whitespace
 
 Pattern =
   'mut' Pattern
@@ -143,38 +145,40 @@ Assignment =
   Lvalue AssignOperator Expression
 
 AssignOperator =
-  ('+' | '-' | '*' | '/' | '%' | '&' | '^' | '<<' | '>>' | '|') '='
+  ('+' | '-' | '*' | '/' | '%' | '&' | '^' | '<<' | '>>' | '|' | '') '='
 
 Lvalue =
-  Ident ('.' Ident | '[' Expression ']')*
+  Ident ('.' (Ident | LvalueInteger) | '[' Expression ']')*
+LvalueInteger =
+  (Nonzero AsciiDigit* | '0')
 
 Type =
   TypeInner
 TypeInner =
-  FieldType | IntType | BoolType
+  IntType | FunctionType | VecType | FieldType | BoolType
                | StringType | NamedType | ArrayType
-               | TupleType | VecType | FunctionType
+               | TupleType
 
 OptionalVisibility =
   'pub'?
 
-MaybeCompTime =
-  'comptime'?
+// DEPRECATED
+// maybe_comp_time ::= "comptime"?
 
 FieldType =
-  MaybeCompTime 'Field'
+  'Field'
 
 BoolType =
-  MaybeCompTime 'bool'
+  'bool'
 
 StringType =
-  'str' ('<' TypeExpression '>')?
+  'str' ('<' (Variable | Integer) '>')?
 
 IntType =
-  MaybeCompTime IntTypeToken
+  IntTypeToken
 
 IntTypeToken =
-  ('u' | 'i') AsciiDigit+ !ASCII_ALPHA
+  'u' AsciiDigit AsciiDigit?
 
 NamedType =
   Path GenericTypeArgs
@@ -183,10 +187,10 @@ VecType =
   'Vec' GenericTypeArgs
 
 GenericTypeArgs =
-  ('<' ((Type &(',' | '>') | TypeExpression) ',')* (Type &(',' | '>') | TypeExpression) ','? '>')?
+  ('<' ((Type | TypeExpression) ',')* (Type | TypeExpression) ','? '>')?
 
 ArrayType =
-  '[' Type (':' TypeExpression)? ']'
+  '[' Type (';' (Variable | Integer))? ']'
 
 TupleType =
   '(' ((Type ',')* Type ','?)? ')'
@@ -216,32 +220,18 @@ FunctionType =
 /// EQUIVALENT TO:
 
 Expression =
-  EqExpr
-EqExpr =
-  OrExpr ('=' | '!=') EqExpr | OrExpr
-OrExpr =
-  XorExpr '|' OrExpr | XorExpr
-XorExpr =
-  AndExpr '^' XorExpr | AndExpr
-AndExpr =
-  LessGreaterExpr '&' AndExpr | LessGreaterExpr
-LessGreaterExpr =
-  ShiftExpr ('<' | '<=' | '>' | '>=') LessGreaterExpr | ShiftExpr
-ShiftExpr =
-  SumExpr ('<<' | '>>') ShiftExpr | SumExpr
-SumExpr =
-  ProductExpr ('+' | '-') SumExpr | ProductExpr
-ProductExpr =
-  Term ('/' | '*') ProductExpr | Term
+  Term (Operator Term)*
+ExpressionNoConstructors =
+  TermNoConstructors (Operator TermNoConstructors)*
+ExpressionNotSemi =
+  IfExpr | Block
+Operator =
+  '==' | '!=' | '|' | '^' | '&' | '<<' | '>>' | '<=' | '>=' | '<' | '>' | ' ' | '*' | '-' | '/' | '*' | '%'
 
 TypeExpression =
-  TypeEqExpr
-TypeEqExpr =
-  TypeSumExpr ('=' | '!=') TypeEqExpr | TypeSumExpr
-TypeSumExpr =
-  TypeProductExpr ('+' | '-') TypeSumExpr | TypeProductExpr
-TypeProductExpr =
-  TypeExpressionTerm ('/' | '*') TypeProductExpr | TypeExpressionTerm
+  TypeExpressionTerm (TypeOperator TypeExpressionTerm)*
+TypeOperator =
+  '+' | '-' | '/' | '*' | '%'
 
 TypeExpressionTerm =
   NegationInTypeExpression | TypeExpressionAtom
@@ -250,35 +240,43 @@ TypeExpressionTerm =
 
 Term =
   Not | Negation | AtomOrRightUnary
+TermNoConstructors =
+  NotNoConstructors | NegationNoConstructors | AtomOrRightUnaryNoConstructors
 
 AtomOrRightUnary =
   Atom (CallRhs | ArrayRhs | CastRhs | MemberRhs)*
+AtomOrRightUnaryNoConstructors =
+  AtomNoConstructors (CallRhs | ArrayRhs | CastRhs | MemberRhs)*
 CallRhs =
   '(' ExpressionList ')'
 ArrayRhs =
   '[' Expression ']'
 CastRhs =
-  'as' Type
+  Whitespace 'as' Whitespace Type
 MemberRhs =
   '.' FieldName ('(' ExpressionList ')')?
 
 IfExpr =
-  'if' Expression Block ('else' (Block | IfExpr))? 
+  'if' Whitespace ExpressionNoConstructors Block ('else' (Block | IfExpr))? 
 
 Lambda =
   '|' LambdaParameters '|' LambdaReturnType Expression
 
 ForExpr =
-  'for' Ident 'in' ForRange Block 
+  ForKeyword Ident InKeyword ForRange Block
+ForKeyword =
+  'for' Whitespace
+InKeyword =
+  'in' Whitespace
 
 ForRange =
-  Expression '..' Expression | Expression
+  ExpressionNoConstructors '..' ExpressionNoConstructors | ExpressionNoConstructors
 
 ArrayExpr =
   StandardArray | ArraySugar
 
 StandardArray =
-  '[' Expression ']'
+  '[' (Expression ',')* (Expression ','?)? ']'
 
 ArraySugar =
   '[' Expression ';' Expression ']' 
@@ -287,18 +285,24 @@ ExpressionList =
   ((Expression ',')* Expression ','?)?
 
 Not =
-  '!' Term 
+  '!' Term
+NotNoConstructors =
+  '!' TermNoConstructors
 
 Negation =
   '-' Term
+NegationNoConstructors =
+  '-' TermNoConstructors
 NegationInTypeExpression =
   '-' TypeExpressionTerm
 
 Atom =
-  '(' Expression ')' | Tuple | IfExpr | ForExpr | ArrayExpr | Constructor | Lambda | Block | Variable | Literal
+  Tuple | IfExpr | ArrayExpr | Constructor | Lambda | Block | Variable | Literal
+AtomNoConstructors =
+  Tuple | IfExpr | ArrayExpr | Lambda | Block | Variable | Literal
 
 TypeExpressionAtom =
-  Variable | Literal | '(' TypeExpression ')'
+  Variable | TypeLiteral | '(' TypeExpression ')'
 
 Tuple =
   '(' ExpressionList ')'
@@ -306,11 +310,18 @@ Tuple =
 FieldName =
   Ident | Integer
 
+// lexer allows only even number of digits for hex
 Integer =
-  '-'? AsciiDigit+
+  '0x' '00'* (Hex Hex)* | Nonzero AsciiDigit* | '0'
+
+Nonzero =
+  '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+
+Hex =
+  AsciiDigit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 
 Constructor =
-  Path '{' (ConstructorField ',')* ConstructorField ','? '}'
+  Path '{' (ConstructorField ',')* (ConstructorField ','?)? '}'
 
 ConstructorField =
   Ident (':' Expression)?
@@ -321,14 +332,19 @@ Variable =
 Literal =
   Integer | Bool | Str
 
+TypeLiteral =
+  Integer
+
 LiteralOrCollection =
   Literal | Constructor | ArrayExpr
 
 Bool =
   'true' | 'false'
 
-Str =
-  '\'' (!'\'' ~ ANY)* '\''
+Str = 'string'
+AsciiDigit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+AsciiAlpha = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'w' | 'x' | 'y' | 'z' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' | 'G' | 'H' | 'I' | 'J' | 'K' | 'L' | 'M' | 'N' | 'O' | 'P' | 'Q' | 'R' | 'S' | 'T' | 'U' | 'W' | 'X' | 'Y' | 'Z'
+AsciiAlphanumeric = AsciiDigit | AsciiAlpha
 
 Whitespace =
-  ' ' | '\t' | '\n'
+  ' '
