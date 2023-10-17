@@ -31,6 +31,12 @@ fn main() -> Result<(), Error<Rule>> {
             } else {
                 panic!("expected `--all dir`");
             }
+        } else if first_arg == "--gen-and-save" {
+            let mut buf = vec![];
+            let stdin = io::stdin();
+            let mut locked = stdin.lock();
+            locked.read_to_end(&mut buf).unwrap();
+            parse(&buf[..], true, true);
         } else {
             return read_and_parse(&first_arg[..], false);
         }

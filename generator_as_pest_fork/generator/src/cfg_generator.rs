@@ -7,7 +7,7 @@ use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, BTreeSet, HashMap};
 use std::ops::{Range, RangeInclusive};
 
-use cfg::*;
+use cfg::prelude::*;
 
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq)]
 enum SymbolKind {
@@ -22,11 +22,16 @@ struct SymbolWithKind {
     symbol: Symbol,
     kind: SymbolKind,
 }
+struct NegativeRuleMeta {
+    neg: Symbol,
+    chars: String,
+}
 
 struct Generator {
     grammar: Cfg,
     syms: BTreeMap<String, SymbolWithKind>,
     syms_by_range: HashMap<RangeInclusive<char>, String>,
+    negative_rules: Vec<NegativeRuleMeta>,
     // chars: BTreeMap<Terminal, NamedSymbol>,
     // // chars_by_sym: BTreeMap<Symbol, Terminal>,
     // rules: BTreeMap<String, Symbol>,
@@ -38,6 +43,7 @@ impl Generator {
             grammar: Cfg::new(),
             syms: BTreeMap::new(),
             syms_by_range: HashMap::new(),
+            negative_rules: vec![],
         }
     }
 
@@ -71,6 +77,23 @@ impl Generator {
 
     fn add_rule(&mut self, lhs: Symbol) {
         self.syms.insert(format!("r_{}", lhs.usize()), SymbolWithKind { symbol: lhs, kind: SymbolKind::Nonterminal });
+    }
+
+    fn add_negative_sym(&mut self, neg: Symbol) {
+        self.syms.insert(format!("neg_{}", neg.usize()), SymbolWithKind { symbol: neg, kind: SymbolKind::Nonterminal });
+    }
+
+    fn add_negative_rule(&mut self, neg: Symbol, chars: String) {
+        self.negative_rules.push(NegativeRuleMeta { neg, chars });
+    }
+
+    fn decl_negative_rules(&self) -> Vec<TokenStream> {
+        self.negative_rules.iter().map(|neg_rule| {
+            let chars = &neg_rule.chars;
+            let name = format!("neg_{}", neg_rule.neg.usize());
+            let ident = Ident::new_raw(&name[..], Span::call_site());
+            quote! { NegativeRule { sym: #ident, chars: #chars } }
+        }).collect()
     }
 
     fn process_expr(&mut self, expr: &OptimizedExpr, rule_type: RuleType) -> Vec<Symbol> {
@@ -148,8 +171,22 @@ impl Generator {
             },
             // /// Negative lookahead; matches if expression doesn't match, without making progress, e.g. `!e`
             NegPred(expr) => {
-                // TODO
-                vec![]
+                let neg = self.grammar.sym();
+                self.add_negative_sym(neg);
+                eprintln!("{:?}", expr);
+                match &**expr {
+                    Str(chars) => {
+                        self.add_negative_rule(neg, chars.clone());
+                    }
+                    Ident(name) if name == "ASCII_ALPHA" => {
+                        for ch in ('0'..='9').chain('a'..='z').chain('A'..='Z') {
+                            self.add_negative_rule(neg, ch.to_string());
+                        }
+                    }
+                    _ => panic!("invalid negative lookahead - only strings or ASCII_ALPHA are allowed")
+                }
+                self.grammar.rule(neg).rhs([]);
+                vec![neg]
             },
             // /// Continues to match expressions until one of the strings in the `Vec` is found
             Skip(v) => panic!(),
@@ -232,10 +269,11 @@ impl Generator {
 
     fn decl_symbols(&self) -> Vec<TokenStream> {
         self.syms.keys()
-            .map(|name| {
-                let name = Ident::new_raw(&name[..], Span::call_site());
+            .map(|literal| {
+                let name = Ident::new_raw(&literal[..], Span::call_site());
                 quote! {
                     let #name: Symbol = grammar.sym();
+                    debug!("SYM: {:?} NAME: {:?}", #name, #literal);
                 }
             })
             .collect()
@@ -258,10 +296,10 @@ impl Generator {
                 let ch = match sym_with_kind.kind {
                     SymbolKind::Single(ch) => quote! { Some(#ch) },
                     SymbolKind::Range(start, end) => quote! { {
-                        let start = #start as usize;
-                        let end = #end as usize;
+                        let start = #start as u32;
+                        let end = #end as u32;
                         let offset = byte_source.gen(end as f64 - start as f64);
-                        let result = (start + offset as usize) as u8 as char;
+                        let result = char::from_u32(start + offset as u32).expect("incorrect char");
                         Some(result)
                     } },
                     SymbolKind::Null => quote! { None },
@@ -285,13 +323,17 @@ pub fn generate_cfg_generator(rules: &[OptimizedRule]) -> TokenStream {
     let decl_rules = generator.decl_rules();
     let decl_symbols = generator.decl_symbols();
     let match_start = generator.match_start();
+    let decl_negative_rules = generator.decl_negative_rules();
     let result = quote! {
         fn generate(start_sym: &str, driver: &[u8], limit: Option<u64>) -> Result<String, ()> {
-            use pest::cfg::*;
-            use pest::cfg::generation::weighted::{Random, WeightedGrammar};
+            use pest::cfg::prelude::*;
+            use pest::cfg::generation::weighted::{Random, NegativeRule};
             use pest::cfg::generation::weighted::random::ByteSource;
             use pest::cfg::generation::weighted::random::GenRange;
-            let mut grammar: WeightedGrammar<u32> = WeightedGrammar::new();
+            use pest::env_logger::try_init;
+            use pest::log::debug;
+            let _ = try_init();
+            let mut grammar = Cfg::new();
             #(#decl_symbols)*
             #(#decl_rules)*
             let mut binarized = grammar.binarize();
@@ -299,15 +341,14 @@ pub fn generate_cfg_generator(rules: &[OptimizedRule]) -> TokenStream {
                 #(#match_start)*
                 _ => panic!("incorrect start_sym provided"),
             };
-            binarized.set_start(start_sym);
+            let negative_rules = vec![#(#decl_negative_rules),*];
             let mut byte_source = ByteSource::new(driver.iter().cloned());
-            let string = binarized.random(limit, &mut byte_source).map_err(|_| ())?;
-            let result = string.iter().cloned().filter_map(|sym| {
+            let to_stmt_char_with_byte_source = |sym, byte_source: &mut ByteSource<_>| {
                 #(#stmt_char_from_sym)*
                 return Some('X');
-                // panic!("unrecognized output symbol");
-            }).collect();
-            Ok(result)
+            };
+            let (result, string) = binarized.random(start_sym, limit, &mut byte_source, &negative_rules[..], to_stmt_char_with_byte_source).map_err(|_| ())?;
+            Ok(string.into_iter().collect())
         }
     };
     eprintln!("GENERATE: {}", result);

@@ -85,7 +85,6 @@ block ::= "{" statement_not_last* expression? "}"
 global_type_annotation ::= (":" type)?
 
 optional_type_annotation ::= (":" type)?
-
 module_declaration ::= mod_keyword ident ";"
 #atomic
 mod_keyword ::= "mod" WHITESPACE
@@ -95,9 +94,9 @@ use_statement ::= "use" WHITESPACE path (WHITESPACE "as" ident)? ";"
 path ::= "crate" "::" idents | "dep" "::" idents | idents
 idents ::= ident%"::"+
 
+// disallow keywords
 #atomic
-ident ::= (ASCII_ALPHA | "_") (ASCII_ALPHANUMERIC | "_")*
-
+ident ::= !"as" !"assert" !"asserteq" !"bool" !"char" !"comptime" !"constrain" !"contract" !"crate" !"dep" !"distinct" !"else" !"field" !"fn" !"for" !"formatstring" !"global" !"if" !"impl" !"in" !"internal" !"let" !"mod" !"mut" !"open" !"pub" !"return" !"string" !"struct" !"trait" !"type" !"unconstrained" !"use" !"where" !"while" (ASCII_ALPHA | "_") (ASCII_ALPHANUMERIC | "_")*
 statement_not_last ::= declaration ";" | assignment ";" | expression ";" | expression_not_semi
 
 // "constrain" is deprecated
@@ -141,7 +140,7 @@ string_type ::= "str" ("<" (variable | integer) ">")?
 int_type ::= int_type_token
 
 #atomic
-int_type_token ::= "u" ASCII_DIGIT ASCII_DIGIT? !ASCII_ALPHA
+int_type_token ::= "u" ASCII_DIGIT ASCII_DIGIT?
 
 named_type ::= path generic_type_args
 
@@ -258,6 +257,6 @@ literal_or_collection ::= literal | constructor | array_expr
 
 bool ::= "true" | "false"
 
-str ::= "\"" (!"\"" ~ ANY)* "\""
+str ::= "\"" (!"\"" ANY)* "\""
 
 WHITESPACE ::= " " | "\t" | "\n"

@@ -1,0 +1,3 @@
+[submodule "noir"]
+	path = noir
+	url = git@github.com:noir-lang/noir.git

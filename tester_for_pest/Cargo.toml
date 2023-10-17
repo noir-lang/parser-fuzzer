@@ -9,4 +9,4 @@ edition = "2021"
 pest_based_noir_parser = { path = "../pest_based_noir_parser/" }
 pest = { path = "../generator_as_pest_fork/pest/" }
 afl = "0.13"
-noirc_frontend = { path = "/home/piotr/src/noir/compiler/noirc_frontend/" }
+noirc_frontend = { path = "../noir/compiler/noirc_frontend/" }

@@ -23,6 +23,7 @@ dependencies = [
  "cfg-if",
  "hex",
  "num-bigint",
+ "num-traits",
  "serde",
 ]
 
@@ -174,6 +175,15 @@ checksum = "180abfa45703aebe0093f79badacc01b8fd4ea2e35118747e5811127f926e188"
 dependencies = [
  "anstyle",
  "windows-sys",
+]
+
+[[package]]
+name = "archery"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ab7d8a6d00b222909638a01ddcc8c533219e9d5bfada1613afae43481f2fc699"
+dependencies = [
+ "static_assertions",
 ]
 
 [[package]]
@@ -404,15 +414,18 @@ checksum = "50d30906286121d95be3d479533b458f87493b30a4b5f79a607db8f5d11aa91f"
 
 [[package]]
 name = "cfg"
-version = "0.6.2"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9fa5d53516a9f0e22fa2809546e165e045171ceff83f68a9c9cee406ab0c9319"
+checksum = "cd17aa208cbcd38bcf26ef30dc669456659985526b217966bbf7f75f627e58db"
 dependencies = [
  "bit-matrix",
  "bit-vec",
+ "env_logger",
+ "log",
  "num",
  "optional",
  "rand",
+ "rpds",
 ]
 
 [[package]]
@@ -665,6 +678,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "env_logger"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85cdab6a89accf66733ad5a1693a4dcced6aeff64602b634530dd73c1f3ee9f0"
+dependencies = [
+ "humantime",
+ "is-terminal",
+ "log",
+ "regex",
+ "termcolor",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -841,6 +867,12 @@ checksum = "5444c27eef6923071f7ebcc33e3444508466a76f7a2b93da00ed6e19f30c1ddb"
 dependencies = [
  "windows-sys",
 ]
+
+[[package]]
+name = "humantime"
+version = "2.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9a3a5bfb195931eeb336b2a7b4d761daec841b97f947d34394601737a7bba5e4"
 
 [[package]]
 name = "iana-time-zone"
@@ -1161,6 +1193,8 @@ name = "pest"
 version = "2.6.0"
 dependencies = [
  "cfg",
+ "env_logger",
+ "log",
  "thiserror",
  "ucd-trie",
 ]
@@ -1313,6 +1347,15 @@ dependencies = [
  "crypto-bigint",
  "hmac",
  "zeroize",
+]
+
+[[package]]
+name = "rpds"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "99334e9410cf4d16241bb88b27bc282e140327a4c4759be76f8a96e6d0cd0f35"
+dependencies = [
+ "archery",
 ]
 
 [[package]]
@@ -1537,6 +1580,12 @@ dependencies = [
  "base64ct",
  "der",
 ]
+
+[[package]]
+name = "static_assertions"
+version = "1.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "strsim"

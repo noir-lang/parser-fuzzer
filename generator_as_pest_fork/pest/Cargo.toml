@@ -28,4 +28,6 @@ serde = { version = "1.0.145", optional = true }
 serde_json = { version = "1.0.85", optional = true}
 thiserror = { version = "1.0.37", optional = true }
 memchr = { version = "2", optional = true }
-cfg = { version = "0.6.2", features = ["generation"] }
+cfg = { version = "0.8.0", features = ["generation"] }
+env_logger = "0.10"
+log = "0.4"

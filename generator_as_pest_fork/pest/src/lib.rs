@@ -339,6 +339,14 @@ pub mod cfg {
     pub use cfg::*;
 }
 
+pub mod env_logger {
+    pub use env_logger::*;
+}
+
+pub mod log {
+    pub use log::*;
+}
+
 pub use crate::parser::Parser;
 pub use crate::parser_state::{
     set_call_limit, state, Atomicity, Lookahead, MatchDir, ParseResult, ParserState,
