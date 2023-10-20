@@ -203,7 +203,7 @@ function_type = { "fn" ~ "(" ~ ((type ~ ",")* ~ type ~ ","?)? ~ ")" ~ "->" ~ typ
 expression = { term ~ (operator ~ term)* }
 expression_no_constructors = { term_no_constructors ~ (operator ~ term_no_constructors)* }
 expression_not_semi = { if_expr | block }
-operator = { "==" | "!=" | "|" | "^" | "&" | "<<" | ">>" | "<=" | ">=" | "<" | ">" | "+" | "-" | "/" | "*" | "%" }
+operator = { " == " | "!=" | "|" | "^" | "&" | " << " | " >> " | " <= " | " >= " | " < " | " > " | "+" | "-" | "/" | "*" | "%" }
 
 type_expression = { type_expression_term ~ (type_operator ~ type_expression_term)* }
 type_operator = { "+" | "-" | "/" | "*" | "%" }
@@ -248,7 +248,7 @@ negation_no_constructors = { "-" ~ term_no_constructors }
 negation_in_type_expression = { "-" ~ type_expression_term }
 
 atom = { tuple | if_expr | array_expr | constructor | lambda | block | variable | literal }
-atom_no_constructors = { tuple | if_expr | array_expr | lambda | block | variable | literal }
+atom_no_constructors = { tuple | if_expr | array_expr | block | variable | literal }
 
 type_expression_atom = { variable | type_literal | "(" ~ type_expression ~ ")" }
 
@@ -275,6 +275,6 @@ literal_or_collection = { literal | constructor | array_expr }
 
 bool = { "true" | "false" }
 
-str = { "\"" ~ (!"\"" ~ !"\\" ~ ANY)* ~ "\"" }
+str = { "\"" ~ ASCII_ALPHANUMERIC* ~ "\"" }
 
 WHITESPACE = { " " | "\t" | "\n" }
