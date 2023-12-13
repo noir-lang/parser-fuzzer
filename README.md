@@ -80,9 +80,12 @@ ls debug
 * [x] parsing
 * [x] generation
 * [x] fuzzing
-* [ ] grammar compliance
+* [x] grammar compliance
+* [ ] fix for found issues
+* [ ] perfect grammar compliance
 
 ## Reports
 
-* https://github.com/noir-lang/noir/issues/2375
-* https://github.com/noir-lang/noir/issues/2996
+* https://github.com/noir-lang/noir/issues/2375 - "parser does not allow parenthesizing in two type locations #2375" (closed)
+* https://github.com/noir-lang/noir/issues/2996 - "should the parser allow constructors in parentheses within `if` condition and `for`` range? #2996" (closed)
+* https://github.com/noir-lang/noir/issues/3232 - "Parsing ambiguity with expressions and lambdas #3232" **(open)**
