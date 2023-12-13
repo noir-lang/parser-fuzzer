@@ -59,7 +59,7 @@ fn parse(data: &[u8], save: bool, do_panic: bool) {
     let filename = format!("debug/{:x}", data_hash);
     let mut debug = String::new();
     let mut error = String::new();
-    let program_code = NoirParser::generate("program", data, Some(2_000_000));
+    let program_code = NoirParser::generate("program", data, Some(100_000));
     //
     if let Ok(code) = program_code {
         writeln!(debug, "{}", code).unwrap();
